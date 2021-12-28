@@ -74,6 +74,3 @@ The function `train_network(...)` is a call to train the network. Each of the in
 - `batch_size` : the batch size of the data
 - `epochs` : number of epochs for the the training session
 - `optimizer` : the descent algorithm used to train the weights. For the time being mini-batch stochastic gradient descent is the only available optimizer. More to come
-
-
-HAHA THIS IS MY UPDATE
