@@ -4,7 +4,7 @@ An implementation of a standard feed-forward neural network written entirely in 
 # Overview
 
 The files [nn_header.h](./nn_header.h) and [nn_functions.c](./nn_functions.c) contain all the necessary files to create and train a neural network. Please be aware that this code is not optimized for speed or size,
-it is still a work in progress. 
+it is still a work in progress. Criticisms/requests for better implementation of any part of this repository is welcome.
 
 # Walkthrough of the Repository
 
@@ -12,12 +12,14 @@ The following is a walkthrough of how the code is structured to better help the 
 
 ## Example Code
 
-The [OLD_BUILD.zip](./OLD_BUILD.zip) file contains a working implementation of this network on the MNIST dataset. 
+The [STABLE_BUILD.zip](./STABLE_BUILD.zip) file contains a working implementation of this network on the MNIST dataset. The following code snippet will help outline the general structure of the code. NOTE: running this code snippet alone will result in error. Please download [STABLE_BUILD.zip](./STABLE_BUILD.zip) and compile + run the example_mnist_dataset.c for a working implementation.
 
 ```C
 
 int main(){
     int i,j;
+    int batch_size = 50;
+    int epochs = 3;
 
     load_mnist();   // load the data from MNIST into 2D arrays.
     process_labels();  // format the data appropropriately before the function to train the network is called.
@@ -66,9 +68,9 @@ Calling `initialize_network(my_n, &s)` initializes a network with the above stru
 The function `train_network(...)` is a call to train the network. Each of the inputs is described below. <br />
 
 - `my_net` : a pointer to an an instance of `NEURAL_NET`
-- `train_image` : a 2D array of type `double` containing the training data. It is the user's responsibility to ensure that the dimensions of the array match the size of the input layer <br />
-- `label_train` : a 2D array of type `double` containing the training labels. It is the user's responsibility to ensure that the dimesions of this array match the size of the output layer <br />
+- `train_image` : a 2D array of type `double` containing the training data. It is the user's responsibility to ensure that the dimensions of the array match the size of the input layer
+- `label_train` : a 2D array of type `double` containing the training labels. It is the user's responsibility to ensure that the dimesions of this array match the size of the output layer
 - `no_of_train_pts` : total number of training examples for this training session
-- `batch_size' : the batch size of the data
+- `batch_size` : the batch size of the data
 - `epochs` : number of epochs for the the training session
 - `optimizer` : the descent algorithm used to train the weights. For the time being mini-batch stochastic gradient descent is the only available optimizer. More to come
