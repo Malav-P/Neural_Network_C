@@ -178,7 +178,7 @@ int main(){
 
     struct NEURAL_NET* my_net = initialize_network(my_n, &s);
 
-    train_network(my_net, train_image, label_train, no_of_train_pts, batch_size, epochs, 1);
+    train_network(my_net, train_image, label_train, no_of_train_pts, batch_size, epochs, 2);
     test_network(my_net);
 
 }
