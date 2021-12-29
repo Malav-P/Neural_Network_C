@@ -173,12 +173,12 @@ int main(){
 
     printf("processing data complete, now training network...\n\n");
 
-    int my_n[] = {784, 101, 101, 10};
+    int my_n[] = {784, 100, 100, 10};
     int s = sizeof(my_n)/sizeof(int);
 
     struct NEURAL_NET* my_net = initialize_network(my_n, &s);
 
-    train_network(my_net, train_image, label_train, no_of_train_pts, batch_size, epochs, 2);
+    train_network(my_net, train_image, label_train, no_of_train_pts, batch_size, epochs, 3);
     test_network(my_net);
 
 }

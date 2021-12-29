@@ -652,6 +652,85 @@ void train_batch_momentum(struct NEURAL_NET* my_net, double inputs[][network[0]]
 //---------------------------------------------------------------------------------------------
 //*********************************************************************************************
 
+// train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses mini batch SGD with momentum.
+void train_batch_adagrad(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size, double*** a_W, double** a_N){
+    int i, j, k;
+    int in_size = network[0];
+    int out_size = network[*size-1];
+
+    double*** sum_dcdw_W = init_W();
+    double** sum_dcdb_N = init_N();
+
+    for (j=start;j<start+batch_size;j++){
+        double input[in_size];
+        double output[out_size];
+
+        for (k=0;k<in_size;k++){
+        	input[k] = inputs[j][k];
+        }
+
+        for (k=0;k<out_size;k++){
+        	output[k] = outputs[j][k];
+        }
+
+        struct GRADIENTS* g = comp_grad(input, output, my_net);
+
+        add_to_W(sum_dcdw_W, g->dcdw_W);
+        add_to_N(sum_dcdb_N, g->dcdb_N);
+
+        dealloc_W(g->dcdw_W);
+        dealloc_N(g->dcdb_N);
+
+        free(g); 
+    }
+
+    double alpha = 0.1;      // laerning rate 
+    double eps = 0.00000001; // parameter to prevent divide by zero error.
+
+ 
+	for (i=0;i<*size-1;i++){
+
+		for (j=0;j<network[i];j++){
+
+			for (k=0;k<network[i+1];k++){
+			    a_W[i][j][k] += pow((1.0/batch_size)*sum_dcdw_W[i][j][k], 2);
+			}
+	    }        
+	}
+
+	for (i=0;i<*size-1;i++){
+
+		for (j=0;j<network[i];j++){
+
+			for (k=0;k<network[i+1];k++){
+			   my_net->weights_W[i][j][k] -= alpha*(1.0/sqrt(a_W[i][j][k] + eps))*(1.0/batch_size)*sum_dcdw_W[i][j][k];
+			}
+	    }               
+	}
+
+	dealloc_W(sum_dcdw_W);
+
+
+    for (i=1;i<*size;i++){
+
+    	for (j=0;j<network[i];j++){
+    		    a_N[i][j] +=  pow((1.0/batch_size)*sum_dcdb_N[i][j], 2);
+    	}
+    }
+
+    for (i=1;i<*size;i++){
+
+    	for (j=0;j<network[i];j++){
+    		    my_net->biases_N[i][j] -= alpha*(1.0/sqrt(a_N[i][j] + eps))*(1.0/batch_size)*sum_dcdb_N[i][j];
+    	}
+    }
+
+    dealloc_N(sum_dcdb_N);
+}
+
+//---------------------------------------------------------------------------------------------
+//*********************************************************************************************
+
 // train the network
 void train_network(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int no_of_inputs, int batch_size, int epochs, int optimizer){
 	int i,j;
@@ -718,6 +797,45 @@ void train_network(struct NEURAL_NET* my_net, double inputs[][network[0]], doubl
 
 				dealloc_W(v_W);
 				dealloc_N(v_N);
+			}
+
+		}
+	}
+	else if (optimizer == 3){
+		int iterations = ceil(no_of_inputs/batch_size);
+		int remaining_samples = no_of_inputs%batch_size;
+
+
+		if (remaining_samples == 0){
+
+			for (j=0;j<epochs;j++){
+				double*** a_W = init_W();
+				double** a_N = init_N();
+
+				for (i=0;i<iterations;i++){
+					train_batch_adagrad(my_net, inputs, outputs, batch_size*i, batch_size, a_W, a_N);
+				}
+
+				dealloc_W(a_W);
+				dealloc_N(a_N);
+			}
+
+		}
+
+
+		else{
+
+			for (j=0;j<epochs;j++){
+				double*** a_W = init_W();
+				double** a_N = init_N();
+
+				for (i=0;i<iterations-1;i++){
+					train_batch_adagrad(my_net, inputs, outputs, batch_size*i, batch_size, a_W, a_N);
+				}
+				train_batch_adagrad(my_net, inputs, outputs, batch_size*iterations, remaining_samples, a_W, a_N);
+
+				dealloc_W(a_W);
+				dealloc_N(a_N);
 			}
 
 		}
