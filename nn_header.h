@@ -52,7 +52,7 @@ void print_output(struct NEURAL_NET* my_net);
 //*********************************************************************************************
 
 // train the network
-void train_network(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int no_of_inputs, int batch_size, int epochs, char optimizer[]);
+void train_network(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int no_of_inputs, int batch_size, int epochs, int optimizer);
 
 //---------------------------------------------------------------------------------------------
 

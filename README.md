@@ -31,7 +31,7 @@ int main(){
 
     struct NEURAL_NET* my_net = initialize_network(my_n, &s);
 
-    train_network(my_net, train_image, label_train, no_of_train_pts, batch_size, epochs, "minibatch");
+    train_network(my_net, train_image, label_train, no_of_train_pts, batch_size, epochs, 1);
     test_network(my_net);
 
 }
@@ -73,6 +73,11 @@ The function `train_network(...)` is a call to train the network. Each of the in
 - `no_of_train_pts` : total number of training examples for this training session
 - `batch_size` : the batch size of the data
 - `epochs` : number of epochs for the the training session
-- `optimizer` : the descent algorithm used to train the weights. For the time being mini-batch stochastic gradient descent is the only available optimizer. More to come
+- `optimizer` : the descent algorithm used to train the weights. For the time being mini-batch stochastic gradient descent is the only available optimizer.
 
-END
+### More on optimizers
+
+Currently, the source code supports only the mini batch stochastic gradient descent algorithm. An optimizer is called by using an integer specifier, specified below.
+
+- 1 : mini-batch gradient descent
+- 2 : mini-batch stochastic gradient descent with momentum
