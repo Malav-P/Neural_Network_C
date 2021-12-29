@@ -71,7 +71,7 @@ The function `train_network(...)` is a call to train the network. Each of the in
 - `train_image` : a 2D array of type `double` containing the training data. It is the user's responsibility to ensure that the dimensions of the array match the size of the input layer
 - `label_train` : a 2D array of type `double` containing the training labels. It is the user's responsibility to ensure that the dimesions of this array match the size of the output layer
 - `no_of_train_pts` : total number of training examples for this training session
-- `batch_size` : the batch size of the data
+- `batch_size` : the size of the training sample the algorithm uses when completing a singular update of the weights and biases
 - `epochs` : number of epochs for the the training session
 - `optimizer` : the descent algorithm used to train the weights. For the time being mini-batch stochastic gradient descent is the only available optimizer.
 
