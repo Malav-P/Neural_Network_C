@@ -77,7 +77,9 @@ The function `train_network(...)` is a call to train the network. Each of the in
 
 ### More on optimizers
 
-Currently, the source code supports only the mini batch stochastic gradient descent algorithm. An optimizer is called by using an integer specifier, specified below.
+Currently, the source code supports only the following gradient descent algorithms. An optimizer is called by using an integer specifier, specified below.
 
 - 1 : mini-batch gradient descent
-- 2 : mini-batch stochastic gradient descent with momentum
+- 2 : Momentum
+- 3 : Adagrad
+- 4 : Adadelta
