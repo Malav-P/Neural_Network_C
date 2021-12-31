@@ -20,9 +20,10 @@ int* size;
 
 // declare a struct for the neural net.
 struct NEURAL_NET{
-	double** activations;  // an order two pointer. activations[i][j] is the activation for the jth neuron in the ith layer.
-	double** biases;       // an order two pointer. biases[i][j] is the bias for the jth neuron in the ith layer.
-	double*** weights;     // and order three pointer. weights[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer
+	double** activations_N;  // an order two pointer. activations[i][j] is the activation for the jth neuron in the ith layer.
+	double** biases_N;       // an order two pointer. biases[i][j] is the bias for the jth neuron in the ith layer.
+	double*** weights_W;     // and order three pointer. weights[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer
+	double*** gradients_W;
 };
 
 //*********************************************************************************************
@@ -62,3 +63,5 @@ void train_network(struct NEURAL_NET* my_net, double inputs[][network[0]], doubl
 void free_network(struct NEURAL_NET* my_net);
 
 //---------------------------------------------------------------------------------------------
+
+bool min_reached(struct NEURAL_NET* my_net);

@@ -47,7 +47,7 @@ void load_mnist(){
    tok = strtok(NULL, ",");
 
    while (col<785){
-    test_image[row][col] = strtod(tok, &ptr);
+    test_image[row][col] = strtod(tok, &ptr)/255.0;
     col +=1;
     tok = strtok(NULL, ",");
     
@@ -81,7 +81,7 @@ void load_mnist(){
    tok = strtok(NULL, ",");
 
    while (col<785){
-    train_image[row][col] = strtod(tok, &ptr);
+    train_image[row][col] = strtod(tok, &ptr)/255.0;
     col +=1;
     tok = strtok(NULL, ",");
     
@@ -145,7 +145,7 @@ void test_network(struct NEURAL_NET* my_net){
         }
         feed_fwd(input, my_net);
 
-        int prediction = largest(my_net->activations[*size-1], network[*size-1]);
+        int prediction = largest(my_net->activations_N[*size-1], network[*size-1]);
 
         if (prediction != test_label[i]){
             errors+=1;
@@ -177,8 +177,22 @@ int main(){
     int s = sizeof(my_n)/sizeof(int);
 
     struct NEURAL_NET* my_net = initialize_network(my_n, &s);
+    printf("minimum reached: %d\n", min_reached(my_net));
 
-    train_network(my_net, train_image, label_train, no_of_train_pts, batch_size, epochs, 3);
+    train_network(my_net, train_image, label_train, no_of_train_pts, batch_size, epochs, 5);
     test_network(my_net);
+    // int x, y, z;
+    // for (x=0;x<s-1;x++){
 
+    //  for (y=0;y<my_n[x];y++){
+
+    //      for (z=0;z<my_n[x+1];z++){
+    //          printf("%lf, ",my_net->gradients_W[x][y][z]);
+    //      }
+    //      printf("ENDLINE\n");
+    //     }
+    //     printf("ENDMATRIX\n\n\n\n");
+    // }
+
+    printf("minimum reached: %d\n", min_reached(my_net));
 }

@@ -2,9 +2,10 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <stdbool.h>
 //*********************************************************
 
-// applies activation function to a structure of type L
+// applies activation function to a structure of type L. I have chosen the relU function
 void activ(double* lyr_L, int len){
 	int i;
 
@@ -14,32 +15,28 @@ void activ(double* lyr_L, int len){
 			lyr_L[i] = 0.0;
 		}
 
-		else{
-			lyr_L[i] = 0.001*lyr_L[i];
-		}
-
 	}
 }
 
 //---------------------------------------------------------
 //*********************************************************
 
-// derivative of activation function for hidden layer
+// derivative of activation function for hidden layer. I have chosen the derivative of the relU function
 double activ_deriv(double x){
 
 	if (x<0){
-		return 0;
+		return 0.0;
 	}
 
 	else{
-		return 1;
+		return 1.0;
 	}
 }
 
 //---------------------------------------------------------
 //*********************************************************
 
-// applies activation function to output layer in neural network (which has structure type L). I have chosen the activation function.
+// applies activation function to output layer in neural network (which has structure type L). I have chosen the softmax activation function.
 void out_activ(double* lyr_L, int len){
 	double sum = 0;
 	int i;
@@ -70,9 +67,29 @@ double out_activ_deriv(double* lyr_L, int len, int index){
 }
 
 //---------------------------------------------------------
+//**********************************************************
+
+// generate a random value from a uniform distribution between 0 and 1
+double rand_gen() {
+   // return a uniformly distributed random value
+   return ( (double)(rand()) + 1. )/( (double)(RAND_MAX) + 1. );
+}
+
+//----------------------------------------------------------
 //*********************************************************
 
-// returns a random number of type double from the range (min, max)
+// generate a random value from the standard normal distribution
+double normalRandom() {
+   // return a normally distributed random value
+   double v1=rand_gen();
+   double v2=rand_gen();
+   return cos(2*3.14*v2)*sqrt(-2.*log(v1));
+}
+
+//----------------------------------------------------------
+//*********************************************************
+
+// returns a random number from the range (min, max)
 double randfrom(double min, double max){
     double range = (max - min); 
     double div = RAND_MAX / range;
@@ -91,15 +108,22 @@ int* size;
 
 // declare a struct for the neural net.
 struct NEURAL_NET{
-	double** activations_N;  // an order two pointer. activations[i][j] is the activation for the jth neuron in the ith layer.
-	double** biases_N;       // an order two pointer. biases[i][j] is the bias for the jth neuron in the ith layer.
-	double*** weights_W;     // and order three pointer. weights[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer
+	double** activations_N;  // an order two pointer. activations_N[i][j] is the activation for the jth neuron in the ith layer.
+	double** biases_N;       // an order two pointer. biases_N[i][j] is the bias for the jth neuron in the ith layer.
+	double*** weights_W;     // an order three pointer. weights_W[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer
+	double*** gradients_W;   // an order three pointer. gradients_W[i][j][k] is the gradient of the cost function wrt weights_W[i][j][k] that was computed in the last iteration of training the network
 };
 
 // declare a struct for the gradients to be computed in back_propagation
 struct GRADIENTS{
 	double*** dcdw_W;  // an order three pointer. dcdw[i][j][k] corresponds to the partial derivative of the cost function wrt weights[i][j][k] (defined in the struct above^).
 	double** dcdb_N;   // and order two pointer. dcdb[i][j] corresponds to the partical derivative of the cost function wrt to biases[i][j] (defined in the struct above^).
+};
+
+// declare a struct for batch gradients
+struct BATCH_GRADIENTS{
+	double*** sum_dcdw_W;
+	double** sum_dcdb_N;
 };
 
 
@@ -182,6 +206,25 @@ double** init_N(){
 //---------------------------------------------------------------------------------------------
 //*********************************************************************************************
 
+// allocate memory for a structure of type N. Initialize all entries to 1.0.
+// ptr_N[i][j] is the entry for the jth neuron in the ith layer.
+double** one_init_N(){
+	int i, j;
+	double** ptr_N = alloc_N();
+
+	for (i=0;i<*size;i++){
+
+		for (j=0;j<network[i];j++){
+			ptr_N[i][j] = 1.0;
+		}
+	}
+
+	return ptr_N;
+}
+
+//---------------------------------------------------------------------------------------------
+//*********************************************************************************************
+
 // allocate memory for a structure of type N. Initialize all entries to to a random double between -0.01 and 0.01.
 // ptr_N[i][j] is the entry for the jth neuron in the ith layer.
 double** r_init_N(){
@@ -192,6 +235,25 @@ double** r_init_N(){
 
 		for (j=0;j<network[i];j++){
 			ptr_N[i][j] = randfrom(-0.01, 0.01);
+		}
+	}
+
+	return ptr_N;
+}
+
+//---------------------------------------------------------------------------------------------
+//*********************************************************************************************
+
+// allocate memory for a structure of type N. Initialize all entries according to He initialization procedure
+// ptr_N[i][j] is the entry for the jth neuron in the ith layer.
+double** he_init_N(){
+	int i, j;
+	double** ptr_N = alloc_N();
+
+	for (i=0;i<*size;i++){
+
+		for (j=0;j<network[i];j++){
+			ptr_N[i][j] = normalRandom()*sqrt(2.0/network[i]);
 		}
 	}
 
@@ -267,7 +329,29 @@ double*** init_W(){
 //---------------------------------------------------------------------------------------------
 //*********************************************************************************************
 
-// allocate memory for a structure of type W and intialize each entry with a random value between -1 and 1.
+// allocate memory for a structure of type W and initialize all entries to 1.0.
+// ptr_W[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
+double*** one_init_W(){
+	int i, j, k;
+	double*** ptr_W = alloc_W();
+
+	for (i=0;i<*size-1;i++){
+
+		for (j=0;j<network[i];j++){
+
+			for (k=0;k<network[i+1];k++){
+				ptr_W[i][j][k] = 1.0;
+			}
+		}
+	}
+
+	return ptr_W;
+}
+
+//---------------------------------------------------------------------------------------------
+//*********************************************************************************************
+
+// allocate memory for a structure of type W and intialize each entry with a random value between -0.01 and 0.01.
 // ptr_W[i][j][k] is the entry connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
 double*** r_init_W(){
 	int i, j, k;
@@ -278,7 +362,29 @@ double*** r_init_W(){
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-				ptr_W[i][j][k] = randfrom(-1.0,1.0);
+				ptr_W[i][j][k] = randfrom(-0.01,0.01);
+			}
+		}
+	}
+
+	return ptr_W;
+}
+
+//---------------------------------------------------------------------------------------------
+//*********************************************************************************************
+
+// allocate memory for a structure of type W and intialize each entry according to He initialization procedure
+// ptr_W[i][j][k] is the entry connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
+double*** he_init_W(){
+	int i, j, k;
+	double*** ptr_W = alloc_W();
+
+	for (i=0;i<*size-1;i++){
+
+		for (j=0;j<network[i];j++){
+
+			for (k=0;k<network[i+1];k++){
+				ptr_W[i][j][k] = normalRandom()*sqrt(2.0/network[i]);
 			}
 		}
 	}
@@ -323,8 +429,9 @@ struct NEURAL_NET* initialize_network(int* n, int* s){
 	struct NEURAL_NET* net = malloc(sizeof*net);
 
 	net->activations_N = alloc_N();   // net->activations_N[i][j] is the activation of the jth neuron in the ith layer
-	net->biases_N = r_init_N();       // net->biases_N[i][j] is the bias of the jth neuron in the ith layer
-	net->weights_W = r_init_W();      // net->weights_W[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
+	net->biases_N = he_init_N();       // net->biases_N[i][j] is the bias of the jth neuron in the ith layer
+	net->weights_W = he_init_W();      // net->weights_W[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
+	net->gradients_W = r_init_W();     // net->gradients_W[i][j][k] is the computed gradient of the cost function wrt net->weights_W[i][j][k] after the last training iteration of the network. It is initialized to random values to avoid premature training termination.
 
 	return net;
 }
@@ -512,15 +619,40 @@ void add_to_N(double** cum_sum_N, double** matr_N){
 //---------------------------------------------------------------------------------------------
 //*********************************************************************************************
 
-// train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses mini batch SGD.
-void train_batch(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size){
-    int i, j, k;
+// check if the gradients in the network are all close to zero (below a set precision value). Return true if this is so. Return false otherwise.
+bool min_reached(struct NEURAL_NET* my_net){
+	int i,j,k;
+	double precision = 0.00000001;
+
+	for (i=0;i<*size-1;i++){
+
+		for (j=0;j<network[i];j++){
+
+			for (k=0;k<network[i+1];k++){
+			    if (my_net->gradients_W[i][j][k] > precision){
+			    	return false;
+			    }
+			}
+	    }        
+	}
+	return true;
+}
+
+//---------------------------------------------------------------------------------------------
+//*********************************************************************************************
+
+// compute the elemenwise sum of all the gradients in a batch of training samples.
+struct BATCH_GRADIENTS* sum_of_grads(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size){
+	struct BATCH_GRADIENTS* b_grad = malloc(sizeof*b_grad);
+
+	int j, k;
     int in_size = network[0];
     int out_size = network[*size-1];
 
-    double*** sum_dcdw_W = init_W();
-    double** sum_dcdb_N = init_N();
+    double*** summation_dcdw_W = init_W();
+    double** summation_dcdb_N = init_N();
 
+    // compute cumulative sum of gradients for the batch
     for (j=start;j<start+batch_size;j++){
         double input[in_size];
         double output[out_size];
@@ -535,39 +667,67 @@ void train_batch(struct NEURAL_NET* my_net, double inputs[][network[0]], double 
 
         struct GRADIENTS* g = comp_grad(input, output, my_net);
 
-        add_to_W(sum_dcdw_W, g->dcdw_W);
-        add_to_N(sum_dcdb_N, g->dcdb_N);
+        add_to_W(summation_dcdw_W, g->dcdw_W);
+        add_to_N(summation_dcdb_N, g->dcdb_N);
 
         dealloc_W(g->dcdw_W);
         dealloc_N(g->dcdb_N);
 
         free(g);
     }
+    b_grad->sum_dcdw_W = summation_dcdw_W;
+    b_grad->sum_dcdb_N = summation_dcdb_N;
 
-    double alpha = 0.1; // learning rate
+    return b_grad;
+}
 
+//---------------------------------------------------------------------------------------------
+//*********************************************************************************************
+
+// train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses mini batch SGD.
+void train_batch(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size){
+    int i, j, k;
+
+    struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
+
+
+    // update gradients_W in the NEURAL_NET struct 
 	for (i=0;i<*size-1;i++){
 
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-			   my_net->weights_W[i][j][k] -= alpha*(1.0/batch_size)*sum_dcdw_W[i][j][k];
+			    my_net->gradients_W[i][j][k] = (1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];
+			}
+	    }        
+	}
+
+    double alpha = 0.1; // learning rate
+
+    // adjust weights
+	for (i=0;i<*size-1;i++){
+
+		for (j=0;j<network[i];j++){
+
+			for (k=0;k<network[i+1];k++){
+			   my_net->weights_W[i][j][k] -= alpha*(1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];
 			}
 	    }               
 	}
 
-    dealloc_W(sum_dcdw_W);
+    dealloc_W(b_grad->sum_dcdw_W);
 
-
+    //adjust biases
     for (i=1;i<*size;i++){
 
     	for (j=0;j<network[i];j++){
-    		    my_net->biases_N[i][j] -= alpha*(1.0/batch_size)*sum_dcdb_N[i][j];
+    		    my_net->biases_N[i][j] -= alpha*(1.0/batch_size)*b_grad->sum_dcdb_N[i][j];
     	}
     }
 
 
-    dealloc_N(sum_dcdb_N);
+    dealloc_N(b_grad->sum_dcdb_N);
+    free(b_grad);
 }
 
 //---------------------------------------------------------------------------------------------
@@ -576,49 +736,24 @@ void train_batch(struct NEURAL_NET* my_net, double inputs[][network[0]], double 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses mini batch SGD with momentum.
 void train_batch_momentum(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size, double*** v_W, double** v_N){
     int i, j, k;
-    int in_size = network[0];
-    int out_size = network[*size-1];
 
-    double*** sum_dcdw_W = init_W();
-    double** sum_dcdb_N = init_N();
-
-    for (j=start;j<start+batch_size;j++){
-        double input[in_size];
-        double output[out_size];
-
-        for (k=0;k<in_size;k++){
-        	input[k] = inputs[j][k];
-        }
-
-        for (k=0;k<out_size;k++){
-        	output[k] = outputs[j][k];
-        }
-
-        struct GRADIENTS* g = comp_grad(input, output, my_net);
-
-        add_to_W(sum_dcdw_W, g->dcdw_W);
-        add_to_N(sum_dcdb_N, g->dcdb_N);
-
-        dealloc_W(g->dcdw_W);
-        dealloc_N(g->dcdb_N);
-
-        free(g); 
-    }
+    struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
 
     double beta = 0.9;   // exponential average hyperparameter
     double alpha = 0.1;  // learning rate
 
- 
+    // update the "velocity" of the gradient wrt the weights
 	for (i=0;i<*size-1;i++){
 
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-			    v_W[i][j][k] = beta*v_W[i][j][k] + (1.0-beta)*(1.0/batch_size)*sum_dcdw_W[i][j][k];
+			    v_W[i][j][k] = beta*v_W[i][j][k] + (1.0-beta)*(1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];
 			}
 	    }        
 	}
 
+	// adjust the weights
 	for (i=0;i<*size-1;i++){
 
 		for (j=0;j<network[i];j++){
@@ -629,16 +764,17 @@ void train_batch_momentum(struct NEURAL_NET* my_net, double inputs[][network[0]]
 	    }               
 	}
 
-	dealloc_W(sum_dcdw_W);
+	dealloc_W(b_grad->sum_dcdw_W);
 
-
+	// compute the "velocity" of the gradients wrt the biases
     for (i=1;i<*size;i++){
 
     	for (j=0;j<network[i];j++){
-    		    v_N[i][j] = beta*v_N[i][j] + (1-beta)*(1.0/batch_size)*sum_dcdb_N[i][j];
+    		    v_N[i][j] = beta*v_N[i][j] + (1-beta)*(1.0/batch_size)*b_grad->sum_dcdb_N[i][j];
     	}
     }
 
+    // update the biases
     for (i=1;i<*size;i++){
 
     	for (j=0;j<network[i];j++){
@@ -646,169 +782,218 @@ void train_batch_momentum(struct NEURAL_NET* my_net, double inputs[][network[0]]
     	}
     }
 
-    dealloc_N(sum_dcdb_N);
+    dealloc_N(b_grad->sum_dcdb_N);
+    free(b_grad);
 }
 
 //---------------------------------------------------------------------------------------------
 //*********************************************************************************************
 
-// train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses mini batch SGD with momentum.
+// train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses Adagrad optimizer.
 void train_batch_adagrad(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size, double*** a_W, double** a_N){
     int i, j, k;
-    int in_size = network[0];
-    int out_size = network[*size-1];
 
-    double*** sum_dcdw_W = init_W();
-    double** sum_dcdb_N = init_N();
+    struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
 
-    for (j=start;j<start+batch_size;j++){
-        double input[in_size];
-        double output[out_size];
-
-        for (k=0;k<in_size;k++){
-        	input[k] = inputs[j][k];
-        }
-
-        for (k=0;k<out_size;k++){
-        	output[k] = outputs[j][k];
-        }
-
-        struct GRADIENTS* g = comp_grad(input, output, my_net);
-
-        add_to_W(sum_dcdw_W, g->dcdw_W);
-        add_to_N(sum_dcdb_N, g->dcdb_N);
-
-        dealloc_W(g->dcdw_W);
-        dealloc_N(g->dcdb_N);
-
-        free(g); 
-    }
-
-    double alpha = 0.1;      // laerning rate 
-    double eps = 0.00000001; // parameter to prevent divide by zero error.
-
- 
+    // update gradients_W in the NEURAL_NET struct
 	for (i=0;i<*size-1;i++){
 
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-			    a_W[i][j][k] += pow((1.0/batch_size)*sum_dcdw_W[i][j][k], 2);
+			    my_net->gradients_W[i][j][k] = (1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];
 			}
 	    }        
 	}
 
+    double alpha = 0.01;      // laerning rate 
+    double eps = 0.0000001; // parameter to prevent divide by zero error.
+
+    // compute the accumulated squared gradients wrt the weights
 	for (i=0;i<*size-1;i++){
 
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-			   my_net->weights_W[i][j][k] -= alpha*(1.0/sqrt(a_W[i][j][k] + eps))*(1.0/batch_size)*sum_dcdw_W[i][j][k];
+			    a_W[i][j][k] += pow((1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k], 2);
+			}
+	    }        
+	}
+
+	// adjust weights
+	for (i=0;i<*size-1;i++){
+
+		for (j=0;j<network[i];j++){
+
+			for (k=0;k<network[i+1];k++){
+			   my_net->weights_W[i][j][k] -= alpha*(1.0/sqrt(a_W[i][j][k] + eps))*(1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];
 			}
 	    }               
 	}
 
-	dealloc_W(sum_dcdw_W);
+	dealloc_W(b_grad->sum_dcdw_W);
 
-
+	// compute the accumulated squared gradients wrt the biases
     for (i=1;i<*size;i++){
 
     	for (j=0;j<network[i];j++){
-    		    a_N[i][j] +=  pow((1.0/batch_size)*sum_dcdb_N[i][j], 2);
+    		    a_N[i][j] +=  pow((1.0/batch_size)*b_grad->sum_dcdb_N[i][j], 2);
     	}
     }
 
+    // adjust the biases
     for (i=1;i<*size;i++){
 
     	for (j=0;j<network[i];j++){
-    		    my_net->biases_N[i][j] -= alpha*(1.0/sqrt(a_N[i][j] + eps))*(1.0/batch_size)*sum_dcdb_N[i][j];
+    		    my_net->biases_N[i][j] -= alpha*(1.0/sqrt(a_N[i][j] + eps))*(1.0/batch_size)*b_grad->sum_dcdb_N[i][j];
     	}
     }
 
-    dealloc_N(sum_dcdb_N);
+    dealloc_N(b_grad->sum_dcdb_N);
+    free(b_grad);
 }
 
 //---------------------------------------------------------------------------------------------
 //*********************************************************************************************
 
-// train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses mini batch SGD with momentum.
-void train_batch_adadelta(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size, double*** s_W, double** s_N){
+// train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses RMSprop optimizer
+void train_batch_RMSprop(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size, double*** s_W, double** s_N){
     int i, j, k;
-    int in_size = network[0];
-    int out_size = network[*size-1];
 
-    double*** sum_dcdw_W = init_W();
-    double** sum_dcdb_N = init_N();
+    struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
 
-    for (j=start;j<start+batch_size;j++){
-        double input[in_size];
-        double output[out_size];
-
-        for (k=0;k<in_size;k++){
-        	input[k] = inputs[j][k];
-        }
-
-        for (k=0;k<out_size;k++){
-        	output[k] = outputs[j][k];
-        }
-
-        struct GRADIENTS* g = comp_grad(input, output, my_net);
-
-        add_to_W(sum_dcdw_W, g->dcdw_W);
-        add_to_N(sum_dcdb_N, g->dcdb_N);
-
-        dealloc_W(g->dcdw_W);
-        dealloc_N(g->dcdb_N);
-
-        free(g); 
-    }
-
-    double alpha = 0.1;      // learning rate 
-    double beta = 0.9;       // exponential average hyperparameter
-    double eps = 0.00000001; // parameter to prevent divide by zero error.
-
- 
+    // update gradients_W in the NEURAL_NET struct
 	for (i=0;i<*size-1;i++){
 
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-			    s_W[i][j][k] = beta*s_W[i][j][k] + (1.0 - beta)*pow((1.0/batch_size)*sum_dcdw_W[i][j][k], 2);
+			    my_net->gradients_W[i][j][k] = (1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];
 			}
 	    }        
 	}
 
+    double alpha = 0.001;      // learning rate 
+    double beta = 0.9;       // exponential average hyperparameter
+    double eps = 0.000001; // parameter to prevent divide by zero error.
+
+    // update the exponential average of the squared gradients wrt the weights
 	for (i=0;i<*size-1;i++){
 
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-			   my_net->weights_W[i][j][k] -= alpha*(1.0/sqrt(s_W[i][j][k] + eps))*(1.0/batch_size)*sum_dcdw_W[i][j][k] ;
+			    s_W[i][j][k] = beta*s_W[i][j][k] + (1.0 - beta)*pow((1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k], 2);
+			}
+	    }        
+	}
+
+	// adjust the weights
+	for (i=0;i<*size-1;i++){
+
+		for (j=0;j<network[i];j++){
+
+			for (k=0;k<network[i+1];k++){
+			   my_net->weights_W[i][j][k] -= alpha*(1.0/sqrt(s_W[i][j][k] + eps))*(1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k] ;
 			}
 	    }               
 	}
 
-	dealloc_W(sum_dcdw_W);
+	dealloc_W(b_grad->sum_dcdw_W);
 
-
+	// update the exponential average of the squared gradients wrt the biases
     for (i=1;i<*size;i++){
 
     	for (j=0;j<network[i];j++){
-    		    s_N[i][j]  = beta*s_N[i][j] + (1.0 - beta)*pow((1.0/batch_size)*sum_dcdb_N[i][j], 2);
+    		    s_N[i][j]  = beta*s_N[i][j] + (1.0 - beta)*pow((1.0/batch_size)*b_grad->sum_dcdb_N[i][j], 2);
     	}
     }
 
+    // update the biases
     for (i=1;i<*size;i++){
 
     	for (j=0;j<network[i];j++){
-    		    my_net->biases_N[i][j] -= alpha*(1.0/sqrt(s_N[i][j] + eps))*(1.0/batch_size)*sum_dcdb_N[i][j];
+    		    my_net->biases_N[i][j] -= alpha*(1.0/sqrt(s_N[i][j] + eps))*(1.0/batch_size)*b_grad->sum_dcdb_N[i][j];
     	}
     }
 
-    dealloc_N(sum_dcdb_N);
+    dealloc_N(b_grad->sum_dcdb_N);
+    free(b_grad);
 }
 
 //---------------------------------------------------------------------------------------------
+//*********************************************************************************************
+
+// train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses RMSprop optimizer
+void train_batch_adadelta(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size, double*** s_W, double** s_N, double*** deltas_W, double** deltas_N, double*** D_W, double** D_N){
+    int i, j, k;
+
+    struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
+
+    // update gradients_W in the NEURAL_NET struct
+	for (i=0;i<*size-1;i++){
+
+		for (j=0;j<network[i];j++){
+
+			for (k=0;k<network[i+1];k++){
+			    my_net->gradients_W[i][j][k] = (1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];
+			}
+	    }        
+	}
+
+    double beta = 0.95;       // exponential average hyperparameter
+    double eps = 0.000001; // parameter to prevent divide by zero error.
+
+    // update the exponential average of the squared gradients wrt the weights
+	for (i=0;i<*size-1;i++){
+
+		for (j=0;j<network[i];j++){
+
+			for (k=0;k<network[i+1];k++){
+			    s_W[i][j][k] = beta*s_W[i][j][k] + (1.0 - beta)*pow((1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k], 2);
+			}
+	    }        
+	}
+
+	// adjust the weights
+	for (i=0;i<*size-1;i++){
+
+		for (j=0;j<network[i];j++){
+
+			for (k=0;k<network[i+1];k++){
+			   my_net->weights_W[i][j][k] -= (sqrt(D_W[i][j][k]+eps)/sqrt(s_W[i][j][k] + eps))*(1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k] ;
+			   deltas_W[i][j][k] = -(sqrt(D_W[i][j][k]+eps)/sqrt(s_W[i][j][k] + eps))*(1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];
+			   D_W[i][j][k] = beta*D_W[i][j][k] + (1.0 - beta)*pow(deltas_W[i][j][k], 2);
+			}
+	    }               
+	}
+
+	dealloc_W(b_grad->sum_dcdw_W);
+
+	// update the exponential average of the squared gradients wrt the biases
+    for (i=1;i<*size;i++){
+
+    	for (j=0;j<network[i];j++){
+    		    s_N[i][j]  = beta*s_N[i][j] + (1.0 - beta)*pow((1.0/batch_size)*b_grad->sum_dcdb_N[i][j], 2);
+    	}
+    }
+
+    // update the biases
+    for (i=1;i<*size;i++){
+
+    	for (j=0;j<network[i];j++){
+    		    my_net->biases_N[i][j] -= (sqrt(D_N[i][j]+eps)/sqrt(s_N[i][j] + eps))*(1.0/batch_size)*b_grad->sum_dcdb_N[i][j];
+    		    deltas_N[i][j] = (sqrt(D_N[i][j]+eps)/sqrt(s_N[i][j] + eps))*(1.0/batch_size)*b_grad->sum_dcdb_N[i][j];
+    		    D_N[i][j] = beta*D_N[i][j] + (1.0 -beta)*pow(deltas_N[i][j], 2);
+    	}
+    }
+
+    dealloc_N(b_grad->sum_dcdb_N);
+    free(b_grad);
+}
+
+//---------------------------------------------------------------------------------------------
+
 //*********************************************************************************************
 
 // train the network
@@ -821,99 +1006,303 @@ void train_network(struct NEURAL_NET* my_net, double inputs[][network[0]], doubl
 	if (remaining_samples == 0){
 
 		for (j=0;j<epochs;j++){
-
+			
+			// mini batch SGD
 			if (optimizer == 1){
 
 				for (i=0;i<iterations;i++){
+					// int x, y, z;
+					// for (x=0;x<*size-1;x++){
+
+					// 	for (y=0;y<network[x];y++){
+
+					// 		for (z=0;z<network[x+1];z++){
+					// 		    printf("%lf, ",my_net->gradients_W[x][y][z]);
+					// 		}
+					//     }        
+					// }
+
 					train_batch(my_net, inputs, outputs, batch_size*i, batch_size);
+
+					if (min_reached(my_net)){
+						printf("mini batch descent algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+						return;
+					}
 				}
 			}
+
+			// momentum
 			else if (optimizer == 2){
 				double*** v_W = init_W();
 				double** v_N = init_N();
 
 				for (i=0;i<iterations;i++){
+					// int x, y, z;
+					// for (x=0;x<*size-1;x++){
+
+					// 	for (y=0;y<network[x];y++){
+
+					// 		for (z=0;z<network[x+1];z++){
+					// 		    printf("%lf, ",my_net->gradients_W[x][y][z]);
+					// 		}
+					//     }        
+					// }
 					train_batch_momentum(my_net, inputs, outputs, batch_size*i, batch_size, v_W, v_N);
+
+					if (min_reached(my_net)){
+						dealloc_W(v_W);
+						dealloc_N(v_N);
+						printf("momentum algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+						return;
+					}
 				}
 
 				dealloc_W(v_W);
 				dealloc_N(v_N);
 			}
+
+			// adagrad
 			else if (optimizer == 3){
 				double*** a_W = init_W();
 				double** a_N = init_N();
 
 				for (i=0;i<iterations;i++){
+					// int x, y, z;
+					// for (x=0;x<*size-1;x++){
+
+					// 	for (y=0;y<network[x];y++){
+
+					// 		for (z=0;z<network[x+1];z++){
+					// 		    printf("%lf, ",my_net->gradients_W[x][y][z]);
+					// 		}
+					//     }        
+					// }
 					train_batch_adagrad(my_net, inputs, outputs, batch_size*i, batch_size, a_W, a_N);
+
+					if (min_reached(my_net)){
+						dealloc_W(a_W);
+						dealloc_N(a_N);
+						printf("adagrad algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+						return;
+					}
 				}
 
 				dealloc_W(a_W);
 				dealloc_N(a_N);
 			}
+
+			// RMSprop
 			else if (optimizer == 4){
 				double*** s_W = init_W();
 				double** s_N = init_N();
-	           
+
 	
 				for (i=0;i<iterations;i++){
-					train_batch_adadelta(my_net, inputs, outputs, batch_size*i, batch_size, s_W, s_N);
+					// int x, y, z;
+					// for (x=0;x<*size-1;x++){
+
+					// 	for (y=0;y<network[x];y++){
+
+					// 		for (z=0;z<network[x+1];z++){
+					// 		    printf("%lf, ",my_net->gradients_W[x][y][z]);
+					// 		}
+					//     }        
+					// }
+					train_batch_RMSprop(my_net, inputs, outputs, batch_size*i, batch_size, s_W, s_N);
+
+					if (min_reached(my_net)){
+						dealloc_W(s_W);
+						dealloc_N(s_N);
+						printf("RMSprop algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+						return;
+					}
 				}
 
 				dealloc_W(s_W);
 				dealloc_N(s_N);
 			}
 
-		}
-	}
+			// adadelta
+			else if (optimizer == 5){
+				double*** s_W = init_W();
+				double** s_N = init_N();
 
+				double*** D_W = init_W();
+				double** D_N = init_N();
+
+				double*** deltas_W = init_W();
+				double** deltas_N = init_N();
+
+	
+				for (i=0;i<iterations;i++){
+					// int x, y, z;
+					// for (x=0;x<*size-1;x++){
+
+					// 	for (y=0;y<network[x];y++){
+
+					// 		for (z=0;z<network[x+1];z++){
+					// 		    printf("%lf, ",my_net->gradients_W[x][y][z]);
+					// 		}
+					//     }        
+					// }
+					train_batch_adadelta(my_net, inputs, outputs, batch_size*i, batch_size, s_W, s_N, deltas_W, deltas_N, D_W, D_N);
+
+					if (min_reached(my_net)){
+						dealloc_W(s_W);
+						dealloc_N(s_N);
+						dealloc_W(D_W);
+						dealloc_N(D_N);
+						dealloc_W(deltas_W);
+						dealloc_N(deltas_N);
+						printf("adadelta algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+						return;
+					}
+				}
+
+				dealloc_W(s_W);
+				dealloc_N(s_N);
+
+				dealloc_W(D_W);
+				dealloc_N(D_N);
+
+				dealloc_W(deltas_W);
+				dealloc_N(deltas_N);
+			}
+		}
+
+		printf("algorithm has completed training of %d epochs\n", epochs);
+	}
+		
 	else{
 
 		for (j=0;j<epochs;j++){
 
+			// mini batch SGD
 			if (optimizer == 1){
 
 				for (i=0;i<iterations-1;i++){
 					train_batch(my_net, inputs, outputs, batch_size*i, batch_size);
+
+					if (min_reached(my_net)){
+						printf("minibatch algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+						return;
+					}
 				}
 				train_batch(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples);
 			}
+
+			// momentum
 			else if (optimizer == 2){
 				double*** v_W = init_W();
 				double** v_N = init_N();
 
 				for (i=0;i<iterations-1;i++){
 					train_batch_momentum(my_net, inputs, outputs, batch_size*i, batch_size, v_W, v_N);
+
+					if (min_reached(my_net)){
+						dealloc_N(v_N);
+						dealloc_W(v_W);
+						printf("momentum algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+						return;
+					}
 				}
 				train_batch_momentum(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples, v_W, v_N);
 
 				dealloc_W(v_W);
 				dealloc_N(v_N);
 			}
+
+			// adagrad
 			else if (optimizer == 3){
 				double*** a_W = init_W();
 				double** a_N = init_N();
 
 				for (i=0;i<iterations-1;i++){
 					train_batch_adagrad(my_net, inputs, outputs, batch_size*i, batch_size, a_W, a_N);
+
+					if (min_reached(my_net)){
+						dealloc_W(a_W);
+						dealloc_N(a_N);	
+						printf("adagrad algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+						return;
+					}
 				}
 				train_batch_adagrad(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples, a_W, a_N);
 
 				dealloc_W(a_W);
 				dealloc_N(a_N);						
 			}
+
+			// RMSprop
 			else if (optimizer == 4){
 				double*** s_W = init_W();
 				double** s_N = init_N();
 
 				for (i=0;i<iterations-1;i++){
-					train_batch_adadelta(my_net, inputs, outputs, batch_size*i, batch_size, s_W, s_N);
+					train_batch_RMSprop(my_net, inputs, outputs, batch_size*i, batch_size, s_W, s_N);
+
+					if (min_reached(my_net)){
+						dealloc_W(s_W);
+						dealloc_N(s_N);	
+						printf("RMSprop algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+						return;
+					}
 				}
-				train_batch_adadelta(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples, s_W, s_N);
+				train_batch_RMSprop(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples, s_W, s_N);
 
 				dealloc_W(s_W);
 				dealloc_N(s_N);	
 			}
+
+			// adadelta
+			else if (optimizer == 5){
+				double*** s_W = init_W();
+				double** s_N = init_N();
+
+				double*** D_W = init_W();
+				double** D_N = init_N();
+
+				double*** deltas_W = init_W();
+				double** deltas_N = init_N();
+
+	
+				for (i=0;i<iterations-1;i++){
+					// int x, y, z;
+					// for (x=0;x<*size-1;x++){
+
+					// 	for (y=0;y<network[x];y++){
+
+					// 		for (z=0;z<network[x+1];z++){
+					// 		    printf("%lf, ",my_net->gradients_W[x][y][z]);
+					// 		}
+					//     }        
+					// }
+					train_batch_adadelta(my_net, inputs, outputs, batch_size*i, batch_size, s_W, s_N, deltas_W, deltas_N, D_W, D_N);
+
+					if (min_reached(my_net)){
+						dealloc_W(s_W);
+						dealloc_N(s_N);
+						dealloc_W(D_W);
+						dealloc_N(D_N);
+						dealloc_W(deltas_W);
+						dealloc_N(deltas_N);
+						printf("adadelta algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+						return;
+					}
+					train_batch_adadelta(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples, s_W, s_N, deltas_W, deltas_N, D_W, D_N);
+				}
+
+				dealloc_W(s_W);
+				dealloc_N(s_N);
+
+				dealloc_W(D_W);
+				dealloc_N(D_N);
+
+				dealloc_W(deltas_W);
+				dealloc_N(deltas_N);
+			}
 		}
+		printf("algorithm has completed training of %d epochs\n", epochs);
 	}
 }
 

@@ -82,4 +82,5 @@ Currently, the source code supports only the following gradient descent algorith
 - 1 : mini-batch gradient descent
 - 2 : Momentum
 - 3 : Adagrad
-- 4 : Adadelta
+- 4 : RMSProp
+- 5 : Adadelta
