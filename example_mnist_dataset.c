@@ -3,7 +3,8 @@
 #include <string.h>
 #include <stdbool.h>
 #include <math.h>
-#include "nn_header.h"
+#include "structs_and_globals.h"
+#include "nn_functions.h"
 
 #define BUFFER_SIZE 10000
 
@@ -162,7 +163,6 @@ void test_network(struct NEURAL_NET* my_net){
 }
 
 
-
 int main(){
     int i,j;
     int batch_size = 50;
@@ -179,7 +179,7 @@ int main(){
     struct NEURAL_NET* my_net = initialize_network(my_n, &s);
     printf("minimum reached: %d\n", min_reached(my_net));
 
-    train_network(my_net, train_image, label_train, no_of_train_pts, batch_size, epochs, 5);
+    train_network(my_net, train_image, label_train, no_of_train_pts, batch_size, epochs, 6);
     test_network(my_net);
     // int x, y, z;
     // for (x=0;x<s-1;x++){

@@ -89,3 +89,4 @@ Currently, the source code supports only the following gradient descent algorith
 - 3 : Adagrad
 - 4 : RMSProp
 - 5 : Adadelta
+- 6 : Adam
