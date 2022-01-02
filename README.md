@@ -24,7 +24,7 @@ The [STABLE_BUILD.zip](./STABLE_BUILD.zip) file contains a working implementatio
 int main(){
     int batch_size = 50;
     int epochs = 3;
-    int optimizer = 3;  // specifies the adagrad descent algorithm
+    int optimizer = 3;
 
     load_mnist();
 
@@ -38,6 +38,8 @@ int main(){
 
     export_weights(my_net, "weights.txt");
     export_biases(my_net, "biases.txt");
+
+    free_network(my_net);
 }
 
 ```
@@ -45,16 +47,16 @@ int main(){
 
 In the example code above, there is a reference to a `struct NEURAL_NET`. This is a user-defined datatype. For any instance `my_net` of this struct, we have:
 
-`my_net.activations_N` : the activations of the neurons in the network. <br />
-`my_net.biases_N` : the biases of the neurons in the network. <br />
-`my_net.weights_W`: the weights between adjacent layers in the network. <br />
+`my_net.activations_N` : activations of the neurons in the network. <br />
+`my_net.biases_N` : biases of the neurons in the network. <br />
+`my_net.weights_W`: weights between adjacent layers in the network. <br />
 
 Accessing individual activations, biases, or weights is simple: <br />
 
 
-`my_net.activations_N[i][j]` : the activation jth neuron in the ith layer of the network.  <br />
-`my_net.biases_N[i][j]` : the bias of the jth neuron in the ith layer of the network <br />
-`my_net.weights_W[i][j][k]`: the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer <br />
+`my_net.activations_N[i][j]` : activation of the jth neuron in the ith layer of the network.  <br />
+`my_net.biases_N[i][j]` : bias of the jth neuron in the ith layer of the network <br />
+`my_net.weights_W[i][j][k]`: weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer <br />
 
 ## Initializing the Network
 
@@ -65,7 +67,7 @@ Before intializing the network, the size of the input and output layers as well 
 - a hidden layer of 101 neurons <br />
 - an output layer of 10 neurons <br />
 
-Calling `initialize_network(my_n, &s)` initializes a network with the above structure. Biases are intialized with a random float value in (-0.01, 0.01) and weights are intialized with a random float value in (-1, 1).
+Calling `initialize_network(my_n, &s)` initializes a network with the above structure. Biases and weights are He initialized.
 
 ## Training the Network
 
@@ -89,3 +91,13 @@ Currently, the source code supports only the following gradient descent algorith
 - 4 : RMSProp
 - 5 : Adadelta
 - 6 : Adam
+
+## Exporting/Importing Training Data
+
+After a network is trained, one can export the weights and biases to `.txt` files use `export_weights` and `export_biases`. The functions require two arguments:
+
+- a pointer to the network whose weights/biases are to be exported
+- a string representing the file name to be exported to
+
+See the example code above for the implementation. <br />
+Similarly one can do the reverse and import weights and biases using `import_weights` and `import biases`. These functions require that a network be initialized and take the same two arguments as above.

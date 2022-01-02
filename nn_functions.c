@@ -1342,6 +1342,7 @@ void free_network(struct NEURAL_NET* my_net){
 	dealloc_N(my_net->activations_N);
 	dealloc_N(my_net->biases_N);
 	dealloc_W(my_net->weights_W);
+   dealloc_W(my_net->gradients_W);
 	free(my_net);
 }
 

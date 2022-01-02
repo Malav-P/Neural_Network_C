@@ -169,4 +169,6 @@ int main(){
 
     export_weights(my_net, "weights.txt");
     export_biases(my_net, "biases.txt");
+
+    free_network(my_net);
 }
