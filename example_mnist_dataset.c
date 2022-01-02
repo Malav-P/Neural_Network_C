@@ -3,119 +3,110 @@
 #include <string.h>
 #include <stdbool.h>
 #include <math.h>
-#include "structs_and_globals.h"
+
 #include "nn_functions.h"
 
-#define BUFFER_SIZE 10000
 
-#define no_of_test_pts 1000
-#define no_of_train_pts 20000
+#define N_TEST 1000
+#define N_TRAIN 5000
 
-int train_label[no_of_train_pts];
-int test_label[no_of_test_pts];
-double train_image[no_of_train_pts][784];
-double test_image[no_of_test_pts][784];
+int train_label[N_TRAIN];
+int test_label[N_TEST];
+double train_image[N_TRAIN][784];
+double test_image[N_TEST][784];
 
-double label_train[no_of_train_pts][10];
-double label_test[no_of_test_pts][10];
+double train_lbl_dbl[N_TRAIN][10];
+double test_lbl_dbl[N_TEST][10];
 
 void load_mnist(){
     FILE *fp;
-    char buf[BUFFER_SIZE];
-    double ret;
-    int row = 0;
-    int col=0;
+
+    int row, col;
+
+    char buf[10000];
+    char* ptr;
+    char* tok;
 
     fp = fopen("mnist_test.csv","r");
 
-    if(fp == NULL) {
+    if(fp == NULL){
       perror("Error opening file");
       exit(1);
-   }
-
-    while(row<no_of_test_pts){
-
-    col = 0;
-
-   fgets(buf, sizeof(buf), fp);
-
-   char* ptr;
-   char *tok = strtok(buf, ",");
-
-
-   test_label[row] = atoi(tok);
-   col+=1;
-   tok = strtok(NULL, ",");
-
-   while (col<785){
-    test_image[row][col] = strtod(tok, &ptr)/255.0;
-    col +=1;
-    tok = strtok(NULL, ",");
-    
-   }
-   
-    row+=1;
     }
 
+    for(row = 0;row<N_TEST;row++){
 
-    row = 0;
+        col = 0;
+
+        fgets(buf, sizeof(buf), fp);
+
+        tok = strtok(buf, ",");
+        test_label[row] = atoi(tok);
+
+        col+=1;
+        tok = strtok(NULL, ",");
+        while (tok != NULL){
+            test_image[row][col] = strtod(tok, &ptr)/255.0;
+            col +=1;
+            tok = strtok(NULL, ",");
+        }
+    }
+
+    fclose(fp);
+
 
     fp = fopen("mnist_train.csv","r");
 
     if(fp == NULL) {
       perror("Error opening file");
       exit(1);
-   }
-
-   while(row < no_of_train_pts){
-
-    col = 0;
-
-   fgets(buf, sizeof(buf), fp);
-
-   char* ptr;
-   char *tok = strtok(buf, ",");
-
-   
-   train_label[row] = atoi(tok);
-   col+=1;
-   tok = strtok(NULL, ",");
-
-   while (col<785){
-    train_image[row][col] = strtod(tok, &ptr)/255.0;
-    col +=1;
-    tok = strtok(NULL, ",");
-    
-   }
-   
-    row+=1;
     }
-}
+    
+    for(row=0;row < N_TRAIN;row++){
 
-void process_labels(){
+        col = 0;
+
+        fgets(buf, sizeof(buf), fp);
+
+        tok = strtok(buf, ",");
+        train_label[row] = atoi(tok);
+
+        col+=1;
+        tok = strtok(NULL, ",");
+        while (tok != NULL){
+            train_image[row][col] = strtod(tok, &ptr)/255.0;
+            col +=1;
+            tok = strtok(NULL, ",");
+    
+        }
+    }
+
+    fclose(fp);
+
     int i, j;
 
-    for (i=0;i<no_of_train_pts;i++){
+    for (i=0;i<N_TRAIN;i++){
         for (j=0;j<10;j++){
             if (j==train_label[i]){
-                label_train[i][j] = 1;
+                train_lbl_dbl[i][j] = 1;
             }
             else{
-                label_train[i][j] = 0;
+                train_lbl_dbl[i][j] = 0;
             }
         }
     }
 
-    for (i=0;i<no_of_test_pts;i++){
+    for (i=0;i<N_TEST;i++){
         for (j=0;j<10;j++){
             if (j==test_label[i]){
-                label_test[i][j] = 1;
+                test_lbl_dbl[i][j] = 1;
             }
             else{
-                label_test[i][j] = 0;
+                test_lbl_dbl[i][j] = 0;
             }
         }
     }
+    return;
 }
 
 int largest(double* arr, int n){
@@ -139,60 +130,43 @@ void test_network(struct NEURAL_NET* my_net){
 
     int errors = 0;
 
-    for (i=0;i<no_of_test_pts;i++){
+    for (i=0;i<N_TEST;i++){
         double input[784];
         for (j=0;j<784;j++){
             input[j] = test_image[i][j];
         }
         feed_fwd(input, my_net);
 
-        int prediction = largest(my_net->activations_N[*size-1], network[*size-1]);
+        int prediction = largest(my_net->activations_N[3], 10);
 
         if (prediction != test_label[i]){
             errors+=1;
         }
-
-
     }
 
     printf("number of errors: %d\n", errors);
 
-    double error_rate = (double) 100*errors/no_of_test_pts;
+    double error_rate = (double) 100*errors/N_TEST;
 
     printf("error rate: %f %%\n\n", error_rate);
 }
 
 
 int main(){
-    int i,j;
     int batch_size = 50;
     int epochs = 3;
+    int optimizer = 3;
 
     load_mnist();
-    process_labels();
-
-    printf("processing data complete, now training network...\n\n");
 
     int my_n[] = {784, 100, 100, 10};
     int s = sizeof(my_n)/sizeof(int);
 
     struct NEURAL_NET* my_net = initialize_network(my_n, &s);
-    printf("minimum reached: %d\n", min_reached(my_net));
 
-    train_network(my_net, train_image, label_train, no_of_train_pts, batch_size, epochs, 6);
+    train_network(my_net, train_image, train_lbl_dbl, N_TRAIN, batch_size, epochs, optimizer);
     test_network(my_net);
-    // int x, y, z;
-    // for (x=0;x<s-1;x++){
 
-    //  for (y=0;y<my_n[x];y++){
-
-    //      for (z=0;z<my_n[x+1];z++){
-    //          printf("%lf, ",my_net->gradients_W[x][y][z]);
-    //      }
-    //      printf("ENDLINE\n");
-    //     }
-    //     printf("ENDMATRIX\n\n\n\n");
-    // }
-
-    printf("minimum reached: %d\n", min_reached(my_net));
+    export_weights(my_net, "weights.txt");
+    export_biases(my_net, "biases.txt");
 }
