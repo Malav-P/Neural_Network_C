@@ -92,7 +92,7 @@ Currently, the source code supports only the following gradient descent algorith
 - 5 : Adadelta
 - 6 : Adam
 
-## Exporting/Importing Training Data
+## Exporting/Importing Training Data Functions
 
 After a network is trained, one can export the weights and biases to `.txt` files use `export_weights` and `export_biases`. The functions require two arguments:
 
