@@ -994,167 +994,174 @@ void train_network(struct NEURAL_NET* my_net, double inputs[][network[0]], doubl
 	if (remaining_samples == 0){
 
 		for (j=0;j<epochs;j++){
-			
+
+			switch(optimizer){
 			// mini batch SGD
-			if (optimizer == 1){
+   			case 1:{
 
-				for (i=0;i<iterations;i++){
-	
-					train_batch(my_net, inputs, outputs, batch_size*i, batch_size);
+   				for (i=0;i<iterations;i++){
+   	
+   					train_batch(my_net, inputs, outputs, batch_size*i, batch_size);
 
-					if (min_reached(my_net)){
-						printf("mini batch descent algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
-						return;
-					}
-				}
-			}
+   					if (min_reached(my_net)){
+   						printf("mini batch descent algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+   						return;
+   					}
+   				}
+               break;
+   			}
 
-			// momentum
-			else if (optimizer == 2){
-				double*** v_W = init_W();
-				double** v_N = init_N();
+   			// momentum
+   			case 2:{
+   				double*** v_W = init_W();
+   				double** v_N = init_N();
 
-				for (i=0;i<iterations;i++){
+   				for (i=0;i<iterations;i++){
 
-					train_batch_momentum(my_net, inputs, outputs, batch_size*i, batch_size, v_W, v_N);
+   					train_batch_momentum(my_net, inputs, outputs, batch_size*i, batch_size, v_W, v_N);
 
-					if (min_reached(my_net)){
-						dealloc_W(v_W);
-						dealloc_N(v_N);
-						printf("momentum algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
-						return;
-					}
-				}
+   					if (min_reached(my_net)){
+   						dealloc_W(v_W);
+   						dealloc_N(v_N);
+   						printf("momentum algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+   						return;
+   					}
+   				}
 
-				dealloc_W(v_W);
-				dealloc_N(v_N);
-			}
+   				dealloc_W(v_W);
+   				dealloc_N(v_N);
+               break;
+   			}
 
-			// adagrad
-			else if (optimizer == 3){
-				double*** a_W = init_W();
-				double** a_N = init_N();
+   			// adagrad
+   			case 3:{
+   				double*** a_W = init_W();
+   				double** a_N = init_N();
 
-				for (i=0;i<iterations;i++){
+   				for (i=0;i<iterations;i++){
 
-					train_batch_adagrad(my_net, inputs, outputs, batch_size*i, batch_size, a_W, a_N);
+   					train_batch_adagrad(my_net, inputs, outputs, batch_size*i, batch_size, a_W, a_N);
 
-					if (min_reached(my_net)){
-						dealloc_W(a_W);
-						dealloc_N(a_N);
-						printf("adagrad algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
-						return;
-					}
-				}
+   					if (min_reached(my_net)){
+   						dealloc_W(a_W);
+   						dealloc_N(a_N);
+   						printf("adagrad algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+   						return;
+   					}
+   				}
 
-				dealloc_W(a_W);
-				dealloc_N(a_N);
-			}
+   				dealloc_W(a_W);
+   				dealloc_N(a_N);
+               break;
+   			}
 
-			// RMSprop
-			else if (optimizer == 4){
-				double*** s_W = init_W();
-				double** s_N = init_N();
+   			// RMSprop
+   			case 4:{
+   				double*** s_W = init_W();
+   				double** s_N = init_N();
 
-	
-				for (i=0;i<iterations;i++){
+   	
+   				for (i=0;i<iterations;i++){
 
-					train_batch_RMSprop(my_net, inputs, outputs, batch_size*i, batch_size, s_W, s_N);
+   					train_batch_RMSprop(my_net, inputs, outputs, batch_size*i, batch_size, s_W, s_N);
 
-					if (min_reached(my_net)){
-						dealloc_W(s_W);
-						dealloc_N(s_N);
-						printf("RMSprop algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
-						return;
-					}
-				}
+   					if (min_reached(my_net)){
+   						dealloc_W(s_W);
+   						dealloc_N(s_N);
+   						printf("RMSprop algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+   						return;
+   					}
+   				}
 
-				dealloc_W(s_W);
-				dealloc_N(s_N);
-			}
+   				dealloc_W(s_W);
+   				dealloc_N(s_N);
+               break;
+   			}
 
-			// adadelta
-			else if (optimizer == 5){
-				double*** s_W = init_W();
-				double** s_N = init_N();
+   			// adadelta
+   			case 5:{
+   				double*** s_W = init_W();
+   				double** s_N = init_N();
 
-				double*** D_W = init_W();
-				double** D_N = init_N();
+   				double*** D_W = init_W();
+   				double** D_N = init_N();
 
-				double*** deltas_W = init_W();
-				double** deltas_N = init_N();
+   				double*** deltas_W = init_W();
+   				double** deltas_N = init_N();
 
-	
-				for (i=0;i<iterations;i++){
+   	
+   				for (i=0;i<iterations;i++){
 
-					train_batch_adadelta(my_net, inputs, outputs, batch_size*i, batch_size, s_W, s_N, deltas_W, deltas_N, D_W, D_N);
+   					train_batch_adadelta(my_net, inputs, outputs, batch_size*i, batch_size, s_W, s_N, deltas_W, deltas_N, D_W, D_N);
 
-					if (min_reached(my_net)){
-						dealloc_W(s_W);
-						dealloc_N(s_N);
-						dealloc_W(D_W);
-						dealloc_N(D_N);
-						dealloc_W(deltas_W);
-						dealloc_N(deltas_N);
-						printf("adadelta algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
-						return;
-					}
-				}
+   					if (min_reached(my_net)){
+   						dealloc_W(s_W);
+   						dealloc_N(s_N);
+   						dealloc_W(D_W);
+   						dealloc_N(D_N);
+   						dealloc_W(deltas_W);
+   						dealloc_N(deltas_N);
+   						printf("adadelta algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+   						return;
+   					}
+   				}
 
-				dealloc_W(s_W);
-				dealloc_N(s_N);
+   				dealloc_W(s_W);
+   				dealloc_N(s_N);
 
-				dealloc_W(D_W);
-				dealloc_N(D_N);
+   				dealloc_W(D_W);
+   				dealloc_N(D_N);
 
-				dealloc_W(deltas_W);
-				dealloc_N(deltas_N);
-			}
+   				dealloc_W(deltas_W);
+   				dealloc_N(deltas_N);
+               break;
+   			}
 
-			// adam
-			else if (optimizer == 6){
-				double*** m_W = init_W();
-				double** m_N = init_N();
+   			// adam
+   			case 6:{
+   				double*** m_W = init_W();
+   				double** m_N = init_N();
 
-				double*** mhat_W = alloc_W();
-				double** mhat_N = alloc_N();
+   				double*** mhat_W = alloc_W();
+   				double** mhat_N = alloc_N();
 
-				double*** v_W = init_W();
-				double** v_N = init_N();
+   				double*** v_W = init_W();
+   				double** v_N = init_N();
 
-				double*** vhat_W = alloc_W();
-				double** vhat_N = alloc_N();
+   				double*** vhat_W = alloc_W();
+   				double** vhat_N = alloc_N();
 
-	
-				for (i=0;i<iterations;i++){
-					train_batch_adam(my_net, inputs, outputs, batch_size*i, batch_size, m_W, mhat_W, m_N, mhat_N, v_W, vhat_W, v_N, vhat_N, i+1);
+   	
+   				for (i=0;i<iterations;i++){
+   					train_batch_adam(my_net, inputs, outputs, batch_size*i, batch_size, m_W, mhat_W, m_N, mhat_N, v_W, vhat_W, v_N, vhat_N, i+1);
 
-					if (min_reached(my_net)){
-						dealloc_W(m_W);
-						dealloc_N(m_N);
-						dealloc_W(mhat_W);
-						dealloc_N(mhat_N);
-						dealloc_W(v_W);
-						dealloc_N(v_N);
-						dealloc_W(vhat_W);
-						dealloc_N(vhat_N);
-						printf("adam algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
-						return;
-					}
-				}
+   					if (min_reached(my_net)){
+   						dealloc_W(m_W);
+   						dealloc_N(m_N);
+   						dealloc_W(mhat_W);
+   						dealloc_N(mhat_N);
+   						dealloc_W(v_W);
+   						dealloc_N(v_N);
+   						dealloc_W(vhat_W);
+   						dealloc_N(vhat_N);
+   						printf("adam algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+   						return;
+   					}
+   				}
 
-				dealloc_W(m_W);
-				dealloc_N(m_N);
+   				dealloc_W(m_W);
+   				dealloc_N(m_N);
 
-				dealloc_W(mhat_W);
-				dealloc_N(mhat_N);
+   				dealloc_W(mhat_W);
+   				dealloc_N(mhat_N);
 
-				dealloc_W(v_W);
-				dealloc_N(v_N);
+   				dealloc_W(v_W);
+   				dealloc_N(v_N);
 
-				dealloc_W(vhat_W);
-				dealloc_N(vhat_N);
-			}
+   				dealloc_W(vhat_W);
+   				dealloc_N(vhat_N);
+   			}
+         }
 		}
 
 		printf("algorithm has completed training of %d epochs\n", epochs);
@@ -1164,171 +1171,180 @@ void train_network(struct NEURAL_NET* my_net, double inputs[][network[0]], doubl
 
 		for (j=0;j<epochs;j++){
 
-			// mini batch SGD
-			if (optimizer == 1){
+         switch(optimizer){
 
-				for (i=0;i<iterations-1;i++){
-					train_batch(my_net, inputs, outputs, batch_size*i, batch_size);
+   			// mini batch SGD
+   			case 1:{
 
-					if (min_reached(my_net)){
-						printf("minibatch algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
-						return;
-					}
-				}
-				train_batch(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples);
-			}
+   				for (i=0;i<iterations-1;i++){
+   					train_batch(my_net, inputs, outputs, batch_size*i, batch_size);
 
-			// momentum
-			else if (optimizer == 2){
-				double*** v_W = init_W();
-				double** v_N = init_N();
+   					if (min_reached(my_net)){
+   						printf("minibatch algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+   						return;
+   					}
+   				}
+   				train_batch(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples);
+               break;
+   			}
 
-				for (i=0;i<iterations-1;i++){
-					train_batch_momentum(my_net, inputs, outputs, batch_size*i, batch_size, v_W, v_N);
+   			// momentum
+   			case 2:{
+   				double*** v_W = init_W();
+   				double** v_N = init_N();
 
-					if (min_reached(my_net)){
-						dealloc_N(v_N);
-						dealloc_W(v_W);
-						printf("momentum algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
-						return;
-					}
-				}
-				train_batch_momentum(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples, v_W, v_N);
+   				for (i=0;i<iterations-1;i++){
+   					train_batch_momentum(my_net, inputs, outputs, batch_size*i, batch_size, v_W, v_N);
 
-				dealloc_W(v_W);
-				dealloc_N(v_N);
-			}
+   					if (min_reached(my_net)){
+   						dealloc_N(v_N);
+   						dealloc_W(v_W);
+   						printf("momentum algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+   						return;
+   					}
+   				}
+   				train_batch_momentum(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples, v_W, v_N);
 
-			// adagrad
-			else if (optimizer == 3){
-				double*** a_W = init_W();
-				double** a_N = init_N();
+   				dealloc_W(v_W);
+   				dealloc_N(v_N);
+               break;
+   			}
 
-				for (i=0;i<iterations-1;i++){
-					train_batch_adagrad(my_net, inputs, outputs, batch_size*i, batch_size, a_W, a_N);
+   			// adagrad
+   			case 3:{
+   				double*** a_W = init_W();
+   				double** a_N = init_N();
 
-					if (min_reached(my_net)){
-						dealloc_W(a_W);
-						dealloc_N(a_N);	
-						printf("adagrad algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
-						return;
-					}
-				}
-				train_batch_adagrad(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples, a_W, a_N);
+   				for (i=0;i<iterations-1;i++){
+   					train_batch_adagrad(my_net, inputs, outputs, batch_size*i, batch_size, a_W, a_N);
 
-				dealloc_W(a_W);
-				dealloc_N(a_N);						
-			}
+   					if (min_reached(my_net)){
+   						dealloc_W(a_W);
+   						dealloc_N(a_N);	
+   						printf("adagrad algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+   						return;
+   					}
+   				}
+   				train_batch_adagrad(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples, a_W, a_N);
 
-			// RMSprop
-			else if (optimizer == 4){
-				double*** s_W = init_W();
-				double** s_N = init_N();
+   				dealloc_W(a_W);
+   				dealloc_N(a_N);						
+               break;
+   			}
 
-				for (i=0;i<iterations-1;i++){
-					train_batch_RMSprop(my_net, inputs, outputs, batch_size*i, batch_size, s_W, s_N);
+   			// RMSprop
+   			case 4:{
+   				double*** s_W = init_W();
+   				double** s_N = init_N();
 
-					if (min_reached(my_net)){
-						dealloc_W(s_W);
-						dealloc_N(s_N);	
-						printf("RMSprop algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
-						return;
-					}
-				}
-				train_batch_RMSprop(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples, s_W, s_N);
+   				for (i=0;i<iterations-1;i++){
+   					train_batch_RMSprop(my_net, inputs, outputs, batch_size*i, batch_size, s_W, s_N);
 
-				dealloc_W(s_W);
-				dealloc_N(s_N);	
-			}
+   					if (min_reached(my_net)){
+   						dealloc_W(s_W);
+   						dealloc_N(s_N);	
+   						printf("RMSprop algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+   						return;
+   					}
+   				}
+   				train_batch_RMSprop(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples, s_W, s_N);
 
-			// adadelta
-			else if (optimizer == 5){
-				double*** s_W = init_W();
-				double** s_N = init_N();
+   				dealloc_W(s_W);
+   				dealloc_N(s_N);	
+               break;
+   			}
 
-				double*** D_W = init_W();
-				double** D_N = init_N();
+   			// adadelta
+   			case 5:{
+   				double*** s_W = init_W();
+   				double** s_N = init_N();
 
-				double*** deltas_W = init_W();
-				double** deltas_N = init_N();
+   				double*** D_W = init_W();
+   				double** D_N = init_N();
 
-	
-				for (i=0;i<iterations-1;i++){
+   				double*** deltas_W = init_W();
+   				double** deltas_N = init_N();
 
-					train_batch_adadelta(my_net, inputs, outputs, batch_size*i, batch_size, s_W, s_N, deltas_W, deltas_N, D_W, D_N);
+   	
+   				for (i=0;i<iterations-1;i++){
 
-					if (min_reached(my_net)){
-						dealloc_W(s_W);
-						dealloc_N(s_N);
-						dealloc_W(D_W);
-						dealloc_N(D_N);
-						dealloc_W(deltas_W);
-						dealloc_N(deltas_N);
-						printf("adadelta algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
-						return;
-					}
-				}
+   					train_batch_adadelta(my_net, inputs, outputs, batch_size*i, batch_size, s_W, s_N, deltas_W, deltas_N, D_W, D_N);
 
-				train_batch_adadelta(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples, s_W, s_N, deltas_W, deltas_N, D_W, D_N);
+   					if (min_reached(my_net)){
+   						dealloc_W(s_W);
+   						dealloc_N(s_N);
+   						dealloc_W(D_W);
+   						dealloc_N(D_N);
+   						dealloc_W(deltas_W);
+   						dealloc_N(deltas_N);
+   						printf("adadelta algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+   						return;
+   					}
+   				}
 
-				dealloc_W(s_W);
-				dealloc_N(s_N);
+   				train_batch_adadelta(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples, s_W, s_N, deltas_W, deltas_N, D_W, D_N);
 
-				dealloc_W(D_W);
-				dealloc_N(D_N);
+   				dealloc_W(s_W);
+   				dealloc_N(s_N);
 
-				dealloc_W(deltas_W);
-				dealloc_N(deltas_N);
-			}
+   				dealloc_W(D_W);
+   				dealloc_N(D_N);
 
-			// adam
-			else if (optimizer == 6){
-				double*** m_W = init_W();
-				double** m_N = init_N();
+   				dealloc_W(deltas_W);
+   				dealloc_N(deltas_N);
+               break;
+   			}
 
-				double*** mhat_W = alloc_W();
-				double** mhat_N = alloc_N();
+   			// adam
+   			case 6:{
+   				double*** m_W = init_W();
+   				double** m_N = init_N();
 
-				double*** v_W = init_W();
-				double** v_N = init_N();
+   				double*** mhat_W = alloc_W();
+   				double** mhat_N = alloc_N();
 
-				double*** vhat_W = alloc_W();
-				double** vhat_N = alloc_N();
+   				double*** v_W = init_W();
+   				double** v_N = init_N();
 
-	
-				for (i=0;i<iterations-1;i++){
+   				double*** vhat_W = alloc_W();
+   				double** vhat_N = alloc_N();
 
-					train_batch_adam(my_net, inputs, outputs, batch_size*i, batch_size, m_W, mhat_W, m_N, mhat_N, v_W, vhat_W, v_N, vhat_N, i+1);
+   	
+   				for (i=0;i<iterations-1;i++){
 
-					if (min_reached(my_net)){
-						dealloc_W(m_W);
-						dealloc_N(m_N);
-						dealloc_W(mhat_W);
-						dealloc_N(mhat_N);
-						dealloc_W(v_W);
-						dealloc_N(v_N);
-						dealloc_W(vhat_W);
-						dealloc_N(vhat_N);
-						printf("adam algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
-						return;
-					}
-				}
-				
-				train_batch_adam(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples, m_W, mhat_W, m_N, mhat_N, v_W, vhat_W, v_N, vhat_N, iterations);
+   					train_batch_adam(my_net, inputs, outputs, batch_size*i, batch_size, m_W, mhat_W, m_N, mhat_N, v_W, vhat_W, v_N, vhat_N, i+1);
+
+   					if (min_reached(my_net)){
+   						dealloc_W(m_W);
+   						dealloc_N(m_N);
+   						dealloc_W(mhat_W);
+   						dealloc_N(mhat_N);
+   						dealloc_W(v_W);
+   						dealloc_N(v_N);
+   						dealloc_W(vhat_W);
+   						dealloc_N(vhat_N);
+   						printf("adam algorithm has reached sufficient precision after %d iterations on epoch number %d \n", i+1, j+1);
+   						return;
+   					}
+   				}
+   				
+   				train_batch_adam(my_net, inputs, outputs, batch_size*(iterations-1), remaining_samples, m_W, mhat_W, m_N, mhat_N, v_W, vhat_W, v_N, vhat_N, iterations);
 
 
-				dealloc_W(m_W);
-				dealloc_N(m_N);
+   				dealloc_W(m_W);
+   				dealloc_N(m_N);
 
-				dealloc_W(mhat_W);
-				dealloc_N(mhat_N);
+   				dealloc_W(mhat_W);
+   				dealloc_N(mhat_N);
 
-				dealloc_W(v_W);
-				dealloc_N(v_N);
+   				dealloc_W(v_W);
+   				dealloc_N(v_N);
 
-				dealloc_W(vhat_W);
-				dealloc_N(vhat_N);
-			}
+   				dealloc_W(vhat_W);
+   				dealloc_N(vhat_N);
+               break;
+   			}
+         }
 		}
 		printf("algorithm has completed training of %d epochs\n", epochs);
 	}
