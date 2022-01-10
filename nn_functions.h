@@ -23,7 +23,6 @@ struct NEURAL_NET{
 struct NEURAL_NET* initialize_network(int* n, int* s);
 
 //---------------------------------------------------------------------------------------------
-
 //*********************************************************************************************
 
 // compute the first layer's activations from the input. Feed these activations forward throughout the rest of the network.
@@ -49,11 +48,6 @@ void train_network(struct NEURAL_NET* my_net, double inputs[][network[0]], doubl
 
 // dealloc memory associated with network
 void free_network(struct NEURAL_NET* my_net);
-
-//---------------------------------------------------------------------------------------------
-//********************************************************************************************
-
-bool min_reached(struct NEURAL_NET* my_net);
 
 //---------------------------------------------------------------------------------------------
 //*********************************************************************************************

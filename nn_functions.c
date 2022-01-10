@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <stdbool.h>
 #include <string.h>
 
 
@@ -455,7 +454,7 @@ void feed_fwd(double input[], struct NEURAL_NET* my_net){
 //*********************************************************************************************
 
 // check if the gradients in the network are all close to zero (below a set precision value). Return true if this is so. Return false otherwise.
-bool min_reached(struct NEURAL_NET* my_net){
+int min_reached(struct NEURAL_NET* my_net){
 
 	double precision = 0.00000001;
 
@@ -465,12 +464,12 @@ bool min_reached(struct NEURAL_NET* my_net){
 
 			for (int k=0;k<network[i+1];k++){
 			    if (my_net->gradients_W[i][j][k] > precision){
-			    	return false;
+			    	return 0;
 			    }
 			}
 	    }        
 	}
-	return true;
+	return 1;
 }
 
 //---------------------------------------------------------------------------------------------
@@ -977,16 +976,13 @@ void train_batch_adam(struct NEURAL_NET* my_net, double inputs[][network[0]], do
 // train the network
 void train_network(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int no_of_inputs, int batch_size, int epochs, int optimizer){
 	int i,j;
-
 	int iterations = ceil(no_of_inputs/batch_size);
 	int remaining_samples = no_of_inputs%batch_size;
 
 	if (remaining_samples == 0){
-
 		for (j=0;j<epochs;j++){
-
 			switch(optimizer){
-			// mini batch SGD
+				// mini batch SGD
    			case 1:{
 
    				for (i=0;i<iterations;i++){
@@ -1154,15 +1150,11 @@ void train_network(struct NEURAL_NET* my_net, double inputs[][network[0]], doubl
          }
 		}
 
-		printf("algorithm has completed training of %d epochs\n", epochs);
 	}
 		
 	else{
-
 		for (j=0;j<epochs;j++){
-
          switch(optimizer){
-
    			// mini batch SGD
    			case 1:{
 
@@ -1336,8 +1328,9 @@ void train_network(struct NEURAL_NET* my_net, double inputs[][network[0]], doubl
    			}
          }
 		}
-		printf("algorithm has completed training of %d epochs\n", epochs);
 	}
+	printf("algorithm has completed training of %d epochs\n", epochs);
+	return;
 }
 
 //---------------------------------------------------------------------------------------------
