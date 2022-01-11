@@ -64,7 +64,7 @@ struct DATA* load_mnist(){
         tok = strtok(buf, ",");
         test_label_ptr[row] = atoi(tok);
 
-        col+=1;
+
         tok = strtok(NULL, ",");
         while (tok != NULL){
             test_image_ptr[row][col] = strtod(tok, &ptr)/255.0;
@@ -92,7 +92,7 @@ struct DATA* load_mnist(){
         tok = strtok(buf, ",");
         train_label[row] = atoi(tok);
 
-        col+=1;
+
         tok = strtok(NULL, ",");
         while (tok != NULL){
             train_image_ptr[row][col] = strtod(tok, &ptr)/255.0;
