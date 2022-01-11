@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <math.h>
 
 #include "nn_functions.h"
@@ -10,15 +9,37 @@
 #define N_TEST 1000
 #define N_TRAIN 5000
 
-int train_label[N_TRAIN];
-int test_label[N_TEST];
-double train_image[N_TRAIN][784];
-double test_image[N_TEST][784];
+// declare a struct for mnist data
+struct DATA{
+    double** train_images;
+    double** train_labels;
+    double** test_images;
+    int* test_labels;
+};
 
-double train_lbl_dbl[N_TRAIN][10];
-double test_lbl_dbl[N_TEST][10];
+struct DATA* load_mnist(){
+    int train_label[N_TRAIN];
 
-void load_mnist(){
+    struct DATA* my_data = malloc(sizeof*my_data);
+
+    double** train_image_ptr = (double**)calloc(N_TRAIN, sizeof(double*));
+    for(int i =0;i<N_TRAIN;i++){
+        train_image_ptr[i] = (double*)calloc(784, sizeof(double));
+    }
+
+    double** train_label_ptr = (double**)calloc(N_TRAIN, sizeof(double*));
+    for(int i=0;i<N_TRAIN;i++){
+        train_label_ptr[i] = (double*)calloc(10, sizeof(double));
+    }
+
+    double** test_image_ptr = (double**)calloc(N_TRAIN, sizeof(double*));
+    for(int i =0;i<N_TRAIN;i++){
+        test_image_ptr[i] = (double*)calloc(784, sizeof(double));
+    }
+
+    int* test_label_ptr = (int*)calloc(N_TEST, sizeof(int));
+
+
     FILE *fp;
 
     int row, col;
@@ -41,12 +62,12 @@ void load_mnist(){
         fgets(buf, sizeof(buf), fp);
 
         tok = strtok(buf, ",");
-        test_label[row] = atoi(tok);
+        test_label_ptr[row] = atoi(tok);
 
         col+=1;
         tok = strtok(NULL, ",");
         while (tok != NULL){
-            test_image[row][col] = strtod(tok, &ptr)/255.0;
+            test_image_ptr[row][col] = strtod(tok, &ptr)/255.0;
             col +=1;
             tok = strtok(NULL, ",");
         }
@@ -74,7 +95,7 @@ void load_mnist(){
         col+=1;
         tok = strtok(NULL, ",");
         while (tok != NULL){
-            train_image[row][col] = strtod(tok, &ptr)/255.0;
+            train_image_ptr[row][col] = strtod(tok, &ptr)/255.0;
             col +=1;
             tok = strtok(NULL, ",");
     
@@ -88,25 +109,19 @@ void load_mnist(){
     for (i=0;i<N_TRAIN;i++){
         for (j=0;j<10;j++){
             if (j==train_label[i]){
-                train_lbl_dbl[i][j] = 1;
+                train_label_ptr[i][j] = 1;
             }
             else{
-                train_lbl_dbl[i][j] = 0;
+                train_label_ptr[i][j] = 0;
             }
         }
     }
 
-    for (i=0;i<N_TEST;i++){
-        for (j=0;j<10;j++){
-            if (j==test_label[i]){
-                test_lbl_dbl[i][j] = 1;
-            }
-            else{
-                test_lbl_dbl[i][j] = 0;
-            }
-        }
-    }
-    return;
+    my_data->test_images = test_image_ptr;
+    my_data->test_labels = test_label_ptr;
+    my_data->train_images = train_image_ptr;
+    my_data->train_labels = train_label_ptr;
+    return my_data;
 }
 
 int largest(double* arr, int n){
@@ -125,7 +140,7 @@ int largest(double* arr, int n){
     return max;
 }
 
-void test_network(struct NEURAL_NET* my_net){
+void test_network(struct NEURAL_NET* my_net, struct DATA* my_data){
     int i,j;
 
     int errors = 0;
@@ -133,13 +148,13 @@ void test_network(struct NEURAL_NET* my_net){
     for (i=0;i<N_TEST;i++){
         double input[784];
         for (j=0;j<784;j++){
-            input[j] = test_image[i][j];
+            input[j] = my_data->test_images[i][j];
         }
         feed_fwd(input, my_net);
 
         int prediction = largest(my_net->activations_N[3], 10);
 
-        if (prediction != test_label[i]){
+        if (prediction != my_data->test_labels[i]){
             errors+=1;
         }
     }
@@ -155,17 +170,17 @@ void test_network(struct NEURAL_NET* my_net){
 int main(){
     int batch_size = 50;
     int epochs = 3;
-    int optimizer = 4;
+    int optimizer = 3;
 
-    load_mnist();
+    struct DATA* my_data = load_mnist();
 
     int my_n[] = {784, 100, 100, 10};
     int s = sizeof(my_n)/sizeof(int);
 
     struct NEURAL_NET* my_net = initialize_network(my_n, &s);
 
-    train_network(my_net, train_image, train_lbl_dbl, N_TRAIN, batch_size, epochs, optimizer);
-    test_network(my_net);
+    train_network(my_net, my_data->train_images, my_data->train_labels, N_TRAIN, batch_size, epochs, optimizer);
+    test_network(my_net, my_data);
 
     export_weights(my_net, "weights.txt");
     export_biases(my_net, "biases.txt");

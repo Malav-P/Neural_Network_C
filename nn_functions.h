@@ -1,9 +1,3 @@
-// declare global pointers *network and *size
-// *size is an int. Corresponds to number of layers in neural net (a.k.a the length of the array that network points to)
-// network points to first element in an arry of int. Each entry corresponds to number of neurons in the neural net layer.
-int* network;
-int* size;
-
 
 // declare a struct for the neural net.
 struct NEURAL_NET{
@@ -40,7 +34,7 @@ void print_output(struct NEURAL_NET* my_net);
 //*********************************************************************************************
 
 // train the network
-void train_network(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int no_of_inputs, int batch_size, int epochs, int optimizer);
+void train_network(struct NEURAL_NET* my_net, double** inputs, double** outputs, int no_of_inputs, int batch_size, int epochs, int optimizer);
 
 //---------------------------------------------------------------------------------------------
 

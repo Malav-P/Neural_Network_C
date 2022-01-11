@@ -608,7 +608,7 @@ void add_to_N(double** cum_sum_N, double** matr_N){
 //*********************************************************************************************
 
 // compute the elemenwise sum of all the gradients in a batch of training samples.
-struct BATCH_GRADIENTS* sum_of_grads(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size){
+struct BATCH_GRADIENTS* sum_of_grads(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size){
 	struct BATCH_GRADIENTS* b_grad = malloc(sizeof*b_grad);
 
 	int j, k;
@@ -660,7 +660,7 @@ struct BATCH_GRADIENTS* sum_of_grads(struct NEURAL_NET* my_net, double inputs[][
 //*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses mini batch SGD.
-void train_batch(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size){
+void train_batch(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size){
     int i, j, k;
 
     struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
@@ -708,7 +708,7 @@ void train_batch(struct NEURAL_NET* my_net, double inputs[][network[0]], double 
 //*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses mini batch SGD with momentum.
-void train_batch_momentum(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size, double*** v_W, double** v_N){
+void train_batch_momentum(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** v_W, double** v_N){
     int i, j, k;
 
     struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
@@ -748,7 +748,7 @@ void train_batch_momentum(struct NEURAL_NET* my_net, double inputs[][network[0]]
 //*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses Adagrad optimizer.
-void train_batch_adagrad(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size, double*** a_W, double** a_N){
+void train_batch_adagrad(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** a_W, double** a_N){
     int i, j, k;
 
     struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
@@ -798,7 +798,7 @@ void train_batch_adagrad(struct NEURAL_NET* my_net, double inputs[][network[0]],
 //*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses RMSprop optimizer
-void train_batch_RMSprop(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size, double*** s_W, double** s_N){
+void train_batch_RMSprop(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** s_W, double** s_N){
     int i, j, k;
 
     struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
@@ -850,7 +850,7 @@ void train_batch_RMSprop(struct NEURAL_NET* my_net, double inputs[][network[0]],
 //*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses RMSprop optimizer
-void train_batch_adadelta(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size, double*** s_W, double** s_N, double*** deltas_W, double** deltas_N, double*** D_W, double** D_N){
+void train_batch_adadelta(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** s_W, double** s_N, double*** deltas_W, double** deltas_N, double*** D_W, double** D_N){
     int i, j, k;
 
     struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
@@ -909,7 +909,7 @@ void train_batch_adadelta(struct NEURAL_NET* my_net, double inputs[][network[0]]
 //*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses Adam optimizer
-void train_batch_adam(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int start, int batch_size, double*** m_W, double*** mhat_W, double** m_N, double** mhat_N,  double*** v_W, double*** vhat_W, double** v_N, double** vhat_N, int iter_no){
+void train_batch_adam(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** m_W, double*** mhat_W, double** m_N, double** mhat_N,  double*** v_W, double*** vhat_W, double** v_N, double** vhat_N, int iter_no){
     int i, j, k;
 
     struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
@@ -974,7 +974,7 @@ void train_batch_adam(struct NEURAL_NET* my_net, double inputs[][network[0]], do
 //*********************************************************************************************
 
 // train the network
-void train_network(struct NEURAL_NET* my_net, double inputs[][network[0]], double outputs[][network[*size-1]], int no_of_inputs, int batch_size, int epochs, int optimizer){
+void train_network(struct NEURAL_NET* my_net, double** inputs, double** outputs, int no_of_inputs, int batch_size, int epochs, int optimizer){
 	int i,j;
 	int iterations = ceil(no_of_inputs/batch_size);
 	int remaining_samples = no_of_inputs%batch_size;
