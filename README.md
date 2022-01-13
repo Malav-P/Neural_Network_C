@@ -26,15 +26,15 @@ int main(){
     int epochs = 3;
     int optimizer = 3;
 
-    load_mnist();
+    struct DATA* my_data = load_mnist();
 
     int my_n[] = {784, 100, 100, 10};
     int s = sizeof(my_n)/sizeof(int);
 
     struct NEURAL_NET* my_net = initialize_network(my_n, &s);
 
-    train_network(my_net, train_image, train_lbl_dbl, N_TRAIN, batch_size, epochs, optimizer);
-    test_network(my_net);
+    train_network(my_net, my_data->train_images, my_data->train_labels, N_TRAIN, batch_size, epochs, optimizer);
+    test_network(my_net, my_data);
 
     export_weights(my_net, "weights.txt");
     export_biases(my_net, "biases.txt");
@@ -74,9 +74,9 @@ Calling `initialize_network(my_n, &s)` initializes a network with the above stru
 The function `train_network(...)` is a call to train the network. Each of the inputs is described below. <br />
 
 - `my_net` : a pointer to an an instance of `NEURAL_NET`
-- `train_image` : a 2D array of type `double` containing the training data. It is the user's responsibility to ensure that the dimensions of the array match the size of the input layer
-- `label_train` : a 2D array of type `double` containing the training labels. It is the user's responsibility to ensure that the dimesions of this array match the size of the output layer
-- `no_of_train_pts` : total number of training examples for this training session
+- `my_data->train_images` : a 2D array of type `double` containing the training data. It is the user's responsibility to ensure that the dimensions of the array match the size of the input layer
+- `my_data->train_labels` : a 2D array of type `double` containing the training labels. It is the user's responsibility to ensure that the dimesions of this array match the size of the output layer
+- `N_TRAIN` : total number of training examples for this training session
 - `batch_size` : subset size of the training sample the algorithm uses when completing a singular update of the weights and biases
 - `epochs` : number of epochs for the the training session
 - `optimizer` : the descent algorithm used to train the weights.
