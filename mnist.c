@@ -7,7 +7,7 @@
 
 
 #define N_TEST 1000
-#define N_TRAIN 5000
+#define N_TRAIN 20000
 
 // declare a struct for mnist data
 struct DATA{

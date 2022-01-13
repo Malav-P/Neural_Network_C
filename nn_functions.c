@@ -127,16 +127,6 @@ double randfrom(double min, double max){
 //---------------------------------------------------------
 //*********************************************************************************************
 
-// allocate memory for a structure of type L. L is usually a layer of neurons holding an activation, intermediate value, or bias.
-double* alloc_L(int len){
-   double* ptr_L = (double*)calloc(len, sizeof(double));
-
-   return ptr_L;
-}
-
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
 // allocate memory in a shape of type N. N is usually a network of neurons.
 // ptr_N[i][j] is the jth neuron in the ith layer
 double** alloc_N(){
@@ -144,86 +134,11 @@ double** alloc_N(){
    double** ptr_N = (double**)calloc(*size, sizeof(double*));
 
    for (int i=0;i<*size;i++){
-      ptr_N[i] = alloc_L(network[i]);
+      ptr_N[i] = (double*)calloc(network[i], sizeof(double));
    }
 
    return ptr_N;
 }
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// allocate memory for a structure of type N. Initialize all entries to 0.
-// ptr_N[i][j] is the entry for the jth neuron in the ith layer.
-double** init_N(){
-   double** ptr_N = alloc_N();
-
-   for (int i=0;i<*size;i++){
-
-      for (int j=0;j<network[i];j++){
-         ptr_N[i][j] = 0;
-      }
-   }
-
-   return ptr_N;
-}
-
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// allocate memory for a structure of type N. Initialize all entries to 1.0.
-// ptr_N[i][j] is the entry for the jth neuron in the ith layer.
-double** one_init_N(){
-
-   double** ptr_N = alloc_N();
-
-   for (int i=0;i<*size;i++){
-
-      for (int j=0;j<network[i];j++){
-         ptr_N[i][j] = 1.0;
-      }
-   }
-
-   return ptr_N;
-}
-
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// allocate memory for a structure of type N. Initialize all entries to to a random double between -0.01 and 0.01.
-// ptr_N[i][j] is the entry for the jth neuron in the ith layer.
-double** r_init_N(){
-
-   double** ptr_N = alloc_N();
-
-   for (int i=0;i<*size;i++){
-
-      for (int j=0;j<network[i];j++){
-         ptr_N[i][j] = randfrom(-0.01, 0.01);
-      }
-   }
-
-   return ptr_N;
-}
-
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// allocate memory for a structure of type N. Initialize all entries according to He initialization procedure
-// ptr_N[i][j] is the entry for the jth neuron in the ith layer.
-double** he_init_N(){
-
-   double** ptr_N = alloc_N();
-
-   for (int i=0;i<*size;i++){
-
-      for (int j=0;j<network[i];j++){
-         ptr_N[i][j] = normalRandom()*sqrt(2.0/network[i]);
-      }
-   }
-
-   return ptr_N;
-}
-
 //---------------------------------------------------------------------------------------------
 //**********************************************************************************************
 
@@ -239,6 +154,50 @@ void dealloc_N(double** ptr_N){
 //----------------------------------------------------------------------------------------------
 //*********************************************************************************************
 
+// allocate memory for a structure of type N. Initialize all entries
+// ptr_N[i][j] is the entry for the jth neuron in the ith layer.
+double** init_N(char c){
+   double** ptr_N = alloc_N();
+
+   switch(c){
+   	// initialize with random values
+	   case 'r':{
+		   for (int i=0;i<*size;i++){
+
+		      for (int j=0;j<network[i];j++){
+		         ptr_N[i][j] = randfrom(-0.01, 0.01);
+		      }
+		   }
+		   break;
+	   }
+
+	   // use He intialization
+	   case 'h':{
+		   for (int i=0;i<*size;i++){
+
+		      for (int j=0;j<network[i];j++){
+		         ptr_N[i][j] = normalRandom()*sqrt(2.0/network[i]);
+		      }
+		   }
+		   break;
+	   }
+	   // initialize all values to zero
+	   case 'z':{
+		   for (int i=0;i<*size;i++){
+
+		      for (int j=0;j<network[i];j++){
+		         ptr_N[i][j] = 0;
+		      }
+		   }
+		   break;
+		}
+	}
+   return ptr_N;
+}
+
+//---------------------------------------------------------------------------------------------
+//*********************************************************************************************
+
 // allocate memory for a structure of type w. w is a matrix  that can hold the weights connecting two structures of type L.
 // ptr_w[j][k] is the entry connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
 double** alloc_w(int i){
@@ -250,6 +209,19 @@ double** alloc_w(int i){
    }
 
    return ptr_w;
+}
+//---------------------------------------------------------------------------------------------
+//*********************************************************************************************
+
+// deallocate memory that was previously allocated using alloc_w.
+void dealloc_w(double** ptr_w, int i){
+
+   for (int j=0;j<network[i];j++){
+      free(ptr_w[j]);
+   }
+
+   free(ptr_w);
+
 }
 //---------------------------------------------------------------------------------------------
 //*********************************************************************************************
@@ -270,107 +242,6 @@ double*** alloc_W(){
 //---------------------------------------------------------------------------------------------
 //*********************************************************************************************
 
-// allocate memory for a structure of type W and initialize all entries to 0.
-// ptr_W[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
-double*** init_W(){
-
-   double*** ptr_W = alloc_W();
-
-   for (int i=0;i<*size-1;i++){
-
-      for (int j=0;j<network[i];j++){
-
-         for (int k=0;k<network[i+1];k++){
-            ptr_W[i][j][k] = 0;
-         }
-      }
-   }
-
-   return ptr_W;
-}
-
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// allocate memory for a structure of type W and initialize all entries to 1.0.
-// ptr_W[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
-double*** one_init_W(){
-
-   double*** ptr_W = alloc_W();
-
-   for (int i=0;i<*size-1;i++){
-
-      for (int j=0;j<network[i];j++){
-
-         for (int k=0;k<network[i+1];k++){
-            ptr_W[i][j][k] = 1.0;
-         }
-      }
-   }
-
-   return ptr_W;
-}
-
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// allocate memory for a structure of type W and intialize each entry with a random value between -0.01 and 0.01.
-// ptr_W[i][j][k] is the entry connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
-double*** r_init_W(){
-
-   double*** ptr_W = alloc_W();
-
-   for (int i=0;i<*size-1;i++){
-
-      for (int j=0;j<network[i];j++){
-
-         for (int k=0;k<network[i+1];k++){
-            ptr_W[i][j][k] = randfrom(-0.01,0.01);
-         }
-      }
-   }
-
-   return ptr_W;
-}
-
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// allocate memory for a structure of type W and intialize each entry according to He initialization procedure
-// ptr_W[i][j][k] is the entry connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
-double*** he_init_W(){
-
-   double*** ptr_W = alloc_W();
-
-   for (int i=0;i<*size-1;i++){
-
-      for (int j=0;j<network[i];j++){
-
-         for (int k=0;k<network[i+1];k++){
-            ptr_W[i][j][k] = normalRandom()*sqrt(2.0/network[i]);
-         }
-      }
-   }
-
-   return ptr_W;
-}
-
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// deallocate memory that was previously allocated using alloc_w.
-void dealloc_w(double** ptr_w, int i){
-
-   for (int j=0;j<network[i];j++){
-      free(ptr_w[j]);
-   }
-
-   free(ptr_w);
-
-}
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
 // deallocate memory for a previously allocated structure of type W.
 void dealloc_W(double*** ptr_W){
 
@@ -380,6 +251,58 @@ void dealloc_W(double*** ptr_W){
 
    free(ptr_W);
 }
+//---------------------------------------------------------------------------------------------
+//*********************************************************************************************
+
+// allocate memory for a structure of type W and initialize all entries
+// ptr_W[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
+double*** init_W(char c){
+   double*** ptr_W = alloc_W();
+
+   switch(c){
+	   case 'r':{
+		   for (int i=0;i<*size-1;i++){
+
+		      for (int j=0;j<network[i];j++){
+
+		         for (int k=0;k<network[i+1];k++){
+		            ptr_W[i][j][k] = randfrom(-0.01,0.01);
+		         }
+		      }
+		   }   	
+		   break;
+	   }
+
+	   case 'h':{
+		   for (int i=0;i<*size-1;i++){
+
+		      for (int j=0;j<network[i];j++){
+
+		         for (int k=0;k<network[i+1];k++){
+		            ptr_W[i][j][k] = normalRandom()*sqrt(2.0/network[i]);
+		         }
+		      }
+		   }
+		   break;
+	   }
+
+	   case 'z':{
+		   for (int i=0;i<*size-1;i++){
+
+		      for (int j=0;j<network[i];j++){
+
+		         for (int k=0;k<network[i+1];k++){
+		            ptr_W[i][j][k] = 0;
+		         }
+		      }
+		   }
+		   break;
+		}
+	}
+
+   return ptr_W;
+}
+
 //---------------------------------------------------------------------------------------------
 //*********************************************************************************************
 
@@ -424,9 +347,9 @@ struct NEURAL_NET* initialize_network(int* n, int* s){
 	struct NEURAL_NET* net = malloc(sizeof*net);
 
 	net->activations_N = alloc_N();   // net->activations_N[i][j] is the activation of the jth neuron in the ith layer
-	net->biases_N = he_init_N();       // net->biases_N[i][j] is the bias of the jth neuron in the ith layer
-	net->weights_W = he_init_W();      // net->weights_W[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
-	net->gradients_W = r_init_W();     // net->gradients_W[i][j][k] is the computed gradient of the cost function wrt net->weights_W[i][j][k] after the last training iteration of the network. It is initialized to random values to avoid premature training termination.
+	net->biases_N = init_N('h');       // net->biases_N[i][j] is the bias of the jth neuron in the ith layer
+	net->weights_W = init_W('h');      // net->weights_W[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
+	net->gradients_W = init_W('r');     // net->gradients_W[i][j][k] is the computed gradient of the cost function wrt net->weights_W[i][j][k] after the last training iteration of the network. It is initialized to random values to avoid premature training termination.
 
 	return net;
 }
@@ -607,7 +530,7 @@ void add_to_N(double** cum_sum_N, double** matr_N){
 //---------------------------------------------------------------------------------------------
 //*********************************************************************************************
 
-// compute the elemenwise sum of all the gradients in a batch of training samples.
+// compute the element-wise sum of all the gradients in a batch of training samples.
 struct BATCH_GRADIENTS* sum_of_grads(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size){
 	struct BATCH_GRADIENTS* b_grad = malloc(sizeof*b_grad);
 
@@ -615,8 +538,8 @@ struct BATCH_GRADIENTS* sum_of_grads(struct NEURAL_NET* my_net, double** inputs,
     int in_size = network[0];
     int out_size = network[*size-1];
 
-    double*** summation_dcdw_W = init_W();
-    double** summation_dcdb_N = init_N();
+    double*** summation_dcdw_W = init_W('z');
+    double** summation_dcdb_N = init_N('z');
 
     // compute cumulative sum of gradients for the batch
     for (j=start;j<start+batch_size;j++){
@@ -999,8 +922,8 @@ void train_network(struct NEURAL_NET* my_net, double** inputs, double** outputs,
 
    			// momentum
    			case 2:{
-   				double*** v_W = init_W();
-   				double** v_N = init_N();
+   				double*** v_W = init_W('z');
+   				double** v_N = init_N('z');
 
    				for (i=0;i<iterations;i++){
 
@@ -1021,8 +944,8 @@ void train_network(struct NEURAL_NET* my_net, double** inputs, double** outputs,
 
    			// adagrad
    			case 3:{
-   				double*** a_W = init_W();
-   				double** a_N = init_N();
+   				double*** a_W = init_W('z');
+   				double** a_N = init_N('z');
 
    				for (i=0;i<iterations;i++){
 
@@ -1043,8 +966,8 @@ void train_network(struct NEURAL_NET* my_net, double** inputs, double** outputs,
 
    			// RMSprop
    			case 4:{
-   				double*** s_W = init_W();
-   				double** s_N = init_N();
+   				double*** s_W = init_W('z');
+   				double** s_N = init_N('z');
 
    	
    				for (i=0;i<iterations;i++){
@@ -1066,14 +989,14 @@ void train_network(struct NEURAL_NET* my_net, double** inputs, double** outputs,
 
    			// adadelta
    			case 5:{
-   				double*** s_W = init_W();
-   				double** s_N = init_N();
+   				double*** s_W = init_W('z');
+   				double** s_N = init_N('z');
 
-   				double*** D_W = init_W();
-   				double** D_N = init_N();
+   				double*** D_W = init_W('z');
+   				double** D_N = init_N('z');
 
-   				double*** deltas_W = init_W();
-   				double** deltas_N = init_N();
+   				double*** deltas_W = init_W('z');
+   				double** deltas_N = init_N('z');
 
    	
    				for (i=0;i<iterations;i++){
@@ -1105,14 +1028,14 @@ void train_network(struct NEURAL_NET* my_net, double** inputs, double** outputs,
 
    			// adam
    			case 6:{
-   				double*** m_W = init_W();
-   				double** m_N = init_N();
+   				double*** m_W = init_W('z');
+   				double** m_N = init_N('z');
 
    				double*** mhat_W = alloc_W();
    				double** mhat_N = alloc_N();
 
-   				double*** v_W = init_W();
-   				double** v_N = init_N();
+   				double*** v_W = init_W('z');
+   				double** v_N = init_N('z');
 
    				double*** vhat_W = alloc_W();
    				double** vhat_N = alloc_N();
@@ -1172,8 +1095,8 @@ void train_network(struct NEURAL_NET* my_net, double** inputs, double** outputs,
 
    			// momentum
    			case 2:{
-   				double*** v_W = init_W();
-   				double** v_N = init_N();
+   				double*** v_W = init_W('z');
+   				double** v_N = init_N('z');
 
    				for (i=0;i<iterations-1;i++){
    					train_batch_momentum(my_net, inputs, outputs, batch_size*i, batch_size, v_W, v_N);
@@ -1194,8 +1117,8 @@ void train_network(struct NEURAL_NET* my_net, double** inputs, double** outputs,
 
    			// adagrad
    			case 3:{
-   				double*** a_W = init_W();
-   				double** a_N = init_N();
+   				double*** a_W = init_W('z');
+   				double** a_N = init_N('z');
 
    				for (i=0;i<iterations-1;i++){
    					train_batch_adagrad(my_net, inputs, outputs, batch_size*i, batch_size, a_W, a_N);
@@ -1216,8 +1139,8 @@ void train_network(struct NEURAL_NET* my_net, double** inputs, double** outputs,
 
    			// RMSprop
    			case 4:{
-   				double*** s_W = init_W();
-   				double** s_N = init_N();
+   				double*** s_W = init_W('z');
+   				double** s_N = init_N('z');
 
    				for (i=0;i<iterations-1;i++){
    					train_batch_RMSprop(my_net, inputs, outputs, batch_size*i, batch_size, s_W, s_N);
@@ -1238,14 +1161,14 @@ void train_network(struct NEURAL_NET* my_net, double** inputs, double** outputs,
 
    			// adadelta
    			case 5:{
-   				double*** s_W = init_W();
-   				double** s_N = init_N();
+   				double*** s_W = init_W('z');
+   				double** s_N = init_N('z');
 
-   				double*** D_W = init_W();
-   				double** D_N = init_N();
+   				double*** D_W = init_W('z');
+   				double** D_N = init_N('z');
 
-   				double*** deltas_W = init_W();
-   				double** deltas_N = init_N();
+   				double*** deltas_W = init_W('z');
+   				double** deltas_N = init_N('z');
 
    	
    				for (i=0;i<iterations-1;i++){
@@ -1279,14 +1202,14 @@ void train_network(struct NEURAL_NET* my_net, double** inputs, double** outputs,
 
    			// adam
    			case 6:{
-   				double*** m_W = init_W();
-   				double** m_N = init_N();
+   				double*** m_W = init_W('z');
+   				double** m_N = init_N('z');
 
    				double*** mhat_W = alloc_W();
    				double** mhat_N = alloc_N();
 
-   				double*** v_W = init_W();
-   				double** v_N = init_N();
+   				double*** v_W = init_W('z');
+   				double** v_N = init_N('z');
 
    				double*** vhat_W = alloc_W();
    				double** vhat_N = alloc_N();
