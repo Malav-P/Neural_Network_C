@@ -6,7 +6,7 @@ An implementation of a standard feed-forward neural network written in C.
 The files [nn_functions.h](./nn_functions.h) and [nn_functions.c](./nn_functions.c) contain all the necessary files to create and train a neural network. Please be aware that this code is not optimized for speed or size,
 it is still a work in progress. The neural net is designed as a classifier and has the following properties: <br />
 
-- hidden layers use relU activation 
+- hidden layers use the relU activation 
 - output layer uses softmax activation
 - back propagation uses mean-squared-error loss
 
