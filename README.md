@@ -74,8 +74,8 @@ Calling `initialize_network(my_n, &s)` initializes a network with the above stru
 The function `train_network(...)` is a call to train the network. Each of the inputs is described below. <br />
 
 - `my_net` : a pointer to an an instance of `NEURAL_NET`
-- `my_data->train_images` : a 2D array of type `double` containing the training data. It is the user's responsibility to ensure that the dimensions of the array match the size of the input layer
-- `my_data->train_labels` : a 2D array of type `double` containing the training labels. It is the user's responsibility to ensure that the dimesions of this array match the size of the output layer
+- `my_data->train_images` : a 2D array of type `double**` containing the training data. It is the user's responsibility to ensure that the dimensions of the array match the size of the input layer
+- `my_data->train_labels` : a 2D array of type `double**` containing the training labels. It is the user's responsibility to ensure that the dimesions of this array match the size of the output layer
 - `N_TRAIN` : total number of training examples for this training session
 - `batch_size` : subset size of the training sample the algorithm uses when completing a singular update of the weights and biases
 - `epochs` : number of epochs for the the training session
