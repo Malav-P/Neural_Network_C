@@ -100,4 +100,4 @@ After a network is trained, one can export the weights and biases to `.txt` file
 - a string representing the file name to be exported to
 
 See the example code above for the implementation. <br />
-Similarly one can do the reverse and import weights and biases using `import_weights` and `import biases`. These functions require that a network be initialized and take the same two arguments as above.
+Similarly one can do the reverse and import weights and biases using `import_weights` and `import_biases`. These functions require that a network be initialized and take the same two arguments as above.
