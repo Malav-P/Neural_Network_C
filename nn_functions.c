@@ -4,6 +4,7 @@
 #include <string.h>
 
 
+
 // declare global pointers *network and *size
 // *size is an int. Corresponds to number of layers in neural net (a.k.a the length of the array that network points to)
 // network points to first element in an arry of int. Each entry corresponds to number of neurons in the neural net layer.
