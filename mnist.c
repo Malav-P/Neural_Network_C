@@ -177,7 +177,7 @@ int main(){
     int my_n[] = {784, 100, 100, 10};
     int s = sizeof(my_n)/sizeof(int);
 
-    struct NEURAL_NET* my_net = initialize_network(my_n, &s);
+    NETWORK* my_net = initialize_network(my_n, &s);
 
     train_network(my_net, my_data->train_images, my_data->train_labels, N_TRAIN, batch_size, epochs, optimizer);
     test_network(my_net, my_data);

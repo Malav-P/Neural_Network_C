@@ -5,7 +5,7 @@
 #include "nn_functions.h"
 
 
-// declare global pointers *network and *size
+// declare global pointers int* network and int* size
 // *size is an int. Corresponds to number of layers in neural net (a.k.a the length of the array that network points to)
 // network points to first element in an arry of int. Each entry corresponds to number of neurons in the neural net layer.
 int* network;
@@ -13,111 +13,22 @@ int* size;
 
 // declare a struct for the gradients to be computed in back_propagation
 struct GRADIENTS{
-	double*** dcdw_W;  // an order three pointer. dcdw[i][j][k] corresponds to the partial derivative of the cost function wrt weights[i][j][k] (defined in the struct above^).
-	double** dcdb_N;   // and order two pointer. dcdb[i][j] corresponds to the partical derivative of the cost function wrt to biases[i][j] (defined in the struct above^).
+	double*** W;  // an order three pointer. W[i][j][k] corresponds to the partial derivative of the cost function wrt weights[i][j][k] (defined in the struct in the header^).
+	double** N;   // and order two pointer. N[i][j] corresponds to the partical derivative of the cost function wrt to biases[i][j] (defined in the struct in the header^).
 };
 
-// declare a struct for batch gradients
-struct BATCH_GRADIENTS{
-	double*** sum_dcdw_W;
-	double** sum_dcdb_N;
-};
 
-//*********************************************************
 
-// applies activation function to a structure of type L. I have chosen the relU function
-static void activ(double* lyr_L, int len){
 
-	for (int i=0;i<len;i++){
 
-		if (lyr_L[i]<0){
-			lyr_L[i] = 0.0;
-		}
 
-	}
-}
+//
+// BEGIN FUNCTIONS OPERATING ON VARIABLES IN THE HEAP
+//
 
-//---------------------------------------------------------
-//*********************************************************
 
-// derivative of activation function for hidden layer. I have chosen the derivative of the relU function
-static double activ_deriv(double x){
 
-	if (x<0){
-		return 0.0;
-	}
 
-	else{
-		return 1.0;
-	}
-}
-
-//---------------------------------------------------------
-//*********************************************************
-
-// applies activation function to output layer in neural network (which has structure type L). I have chosen the softmax activation function.
-static void out_activ(double* lyr_L, int len){
-	double sum = 0;
-	int i;
-
-	for (i=0;i<len;i++){
-		sum += exp(lyr_L[i]);
-	}
-
-	for (i=0; i<len;i++){
-		lyr_L[i] = (1/sum)*exp(lyr_L[i]);
-	}
-}
-
-//---------------------------------------------------------
-//*********************************************************
-
-// given a layer lyr_L of structure type L and and index i, this function returns the derivative of the softmax function wrt to the variable in the (index)th position of lyr_L
-static double out_activ_deriv(double* lyr_L, int len, int index){
-
-	double sum = 0;
-	double x = lyr_L[index];
-
-	for (int i=0;i<len;i++){
-		sum += exp(lyr_L[i]);
-	}
-
-	return (1/sum)*exp(x)*(1-(1/sum)*exp(x));
-}
-
-//---------------------------------------------------------
-//**********************************************************
-
-// generate a random value from a uniform distribution between 0 and 1
-static double rand_gen() {
-   // return a uniformly distributed random value
-   return ( (double)(rand()) + 1. )/( (double)(RAND_MAX) + 1. );
-}
-
-//----------------------------------------------------------
-//*********************************************************
-
-// generate a random value from the standard normal distribution
-static double normalRandom() {
-   // return a normally distributed random value
-   double v1=rand_gen();
-   double v2=rand_gen();
-   return cos(2*3.14*v2)*sqrt(-2.*log(v1));
-}
-
-//----------------------------------------------------------
-//*********************************************************
-
-// returns a random number from the range (min, max)
-static double randfrom(double min, double max){
-    double range = (max - min); 
-    double div = RAND_MAX / range;
-
-    return min + (rand() / div);
-}
-
-//---------------------------------------------------------
-//*********************************************************************************************
 
 // allocate memory in a shape of type N. N is usually a network of neurons.
 // ptr_N[i][j] is the jth neuron in the ith layer
@@ -131,8 +42,7 @@ static double** alloc_N(){
 
    return ptr_N;
 }
-//---------------------------------------------------------------------------------------------
-//**********************************************************************************************
+
 
 // deallocate memory of a structure of type N.
 static void dealloc_N(double** ptr_N){
@@ -143,8 +53,110 @@ static void dealloc_N(double** ptr_N){
 
    free(ptr_N);
 }
-//----------------------------------------------------------------------------------------------
-//*********************************************************************************************
+
+
+// allocate memory for a structure of type w. w is a matrix  that can hold the weights connecting two structures of type L.
+// ptr_w[j][k] is the entry connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
+static double** alloc_w(int i){
+
+   double** ptr_w = (double**)calloc(network[i], sizeof(double*));
+
+   for (int j=0;j<network[i];j++){
+      ptr_w[j] = (double*)calloc(network[i+1], sizeof(double));
+   }
+
+   return ptr_w;
+}
+
+
+// deallocate memory that was previously allocated using alloc_w.
+static void dealloc_w(double** ptr_w, int i){
+
+   for (int j=0;j<network[i];j++){
+      free(ptr_w[j]);
+   }
+
+   free(ptr_w);
+}
+
+
+// allocate memory for a structure of type W. W can be thought of as a list of structure type w.
+// ptr_W[i][j][k] is the entry connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
+static double*** alloc_W(){
+
+   double*** ptr_W = (double***)calloc(*size-1, sizeof(double**));
+
+   for (int i=0;i<*size-1;i++){
+      ptr_W[i] = alloc_w(i);
+   }
+
+   return ptr_W;
+}
+
+
+// deallocate memory for a previously allocated structure of type W.
+static void dealloc_W(double*** ptr_W){
+
+   for (int i=0;i<*size-1;i++){
+      dealloc_w(ptr_W[i], i);
+   }
+
+   free(ptr_W);
+}
+
+
+// dealloc memory associated with network
+void free_network(NETWORK* my_net){
+	dealloc_N(my_net->activations_N);
+	dealloc_N(my_net->biases_N);
+	dealloc_W(my_net->weights_W);
+   dealloc_W(my_net->gradients_W);
+	free(my_net);
+}
+
+
+
+
+
+//
+// END FUNCTIONS OPERATING ON VARIABLES IN THE HEAP
+//
+
+
+
+
+//
+// BEGIN FUNCTIONS TO INITIALIZE NETWORK
+//
+
+
+
+
+// generate a random value from a uniform distribution between 0 and 1
+static double rand_gen() {
+   // return a uniformly distributed random value
+   return ( (double)(rand()) + 1. )/( (double)(RAND_MAX) + 1. );
+}
+
+
+
+// generate a random value from the standard normal distribution
+static double normalRandom() {
+   // return a normally distributed random value
+   double v1=rand_gen();
+   double v2=rand_gen();
+   return cos(2*3.14*v2)*sqrt(-2.*log(v1));
+}
+
+
+// returns a random number from the range (min, max)
+static double randfrom(double min, double max){
+    double range = (max - min); 
+    double div = RAND_MAX / range;
+
+    return min + (rand() / div);
+}
+
 
 // allocate memory for a structure of type N. Initialize all entries
 // ptr_N[i][j] is the entry for the jth neuron in the ith layer.
@@ -186,65 +198,6 @@ static double** init_N(char c){
 	}
    return ptr_N;
 }
-
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// allocate memory for a structure of type w. w is a matrix  that can hold the weights connecting two structures of type L.
-// ptr_w[j][k] is the entry connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
-static double** alloc_w(int i){
-
-   double** ptr_w = (double**)calloc(network[i], sizeof(double*));
-
-   for (int j=0;j<network[i];j++){
-      ptr_w[j] = (double*)calloc(network[i+1], sizeof(double));
-   }
-
-   return ptr_w;
-}
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// deallocate memory that was previously allocated using alloc_w.
-static void dealloc_w(double** ptr_w, int i){
-
-   for (int j=0;j<network[i];j++){
-      free(ptr_w[j]);
-   }
-
-   free(ptr_w);
-
-}
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// allocate memory for a structure of type W. W can be thought of as a list of structure type w.
-// ptr_W[i][j][k] is the entry connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
-static double*** alloc_W(){
-
-   double*** ptr_W = (double***)calloc(*size-1, sizeof(double**));
-
-   for (int i=0;i<*size-1;i++){
-      ptr_W[i] = alloc_w(i);
-   }
-
-   return ptr_W;
-}
-
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// deallocate memory for a previously allocated structure of type W.
-static void dealloc_W(double*** ptr_W){
-
-   for (int i=0;i<*size-1;i++){
-      dealloc_w(ptr_W[i], i);
-   }
-
-   free(ptr_W);
-}
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
 
 // allocate memory for a structure of type W and initialize all entries
 // ptr_W[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
@@ -295,11 +248,115 @@ static double*** init_W(char c){
    return ptr_W;
 }
 
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
+
+
+
+// initialize the network with random weights and biases.
+NETWORK* initialize_network(int* n, int* s){
+	network = n;
+	size = s;
+	
+	NETWORK* net = malloc(sizeof*net);
+
+	net->activations_N = alloc_N();   // net->activations_N[i][j] is the activation of the jth neuron in the ith layer
+	net->biases_N = init_N('h');       // net->biases_N[i][j] is the bias of the jth neuron in the ith layer
+	net->weights_W = init_W('h');      // net->weights_W[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
+	net->gradients_W = init_W('r');     // net->gradients_W[i][j][k] is the computed gradient of the cost function wrt net->weights_W[i][j][k] after the last training iteration of the network. It is initialized to random values to avoid premature training termination.
+
+	return net;
+}
+
+
+
+
+
+//
+// END FUNCTIONS TO INITIALIZE NETWORK
+//
+
+
+
+//
+// BEGIN FUNCTIONS FOR HIDDEN AND OUTPUT LAYER ACTIVATIONS
+//
+
+
+
+
+// applies activation function to a structure of type L. I have chosen the relU function
+static void activ(double* lyr_L, int len){
+
+	for (int i=0;i<len;i++){
+
+		if (lyr_L[i]<0){
+			lyr_L[i] = 0.0;
+		}
+
+	}
+}
+
+
+// derivative of activation function for hidden layer. I have chosen the derivative of the relU function
+static double activ_deriv(double x){
+
+	if (x<0){
+		return 0.0;
+	}
+
+	else{
+		return 1.0;
+	}
+}
+
+
+// applies activation function to output layer in neural network (which has structure type L). I have chosen the softmax activation function.
+static void out_activ(double* lyr_L, int len){
+	double sum = 0;
+	int i;
+
+	for (i=0;i<len;i++){
+		sum += exp(lyr_L[i]);
+	}
+
+	for (i=0; i<len;i++){
+		lyr_L[i] = (1/sum)*exp(lyr_L[i]);
+	}
+}
+
+
+// given a layer lyr_L of structure type L and and index i, this function returns the derivative of the softmax function wrt to the variable in the (index)th position of lyr_L
+static double out_activ_deriv(double* lyr_L, int len, int index){
+
+	double sum = 0;
+	double x = lyr_L[index];
+
+	for (int i=0;i<len;i++){
+		sum += exp(lyr_L[i]);
+	}
+
+	return (1/sum)*exp(x)*(1-(1/sum)*exp(x));
+}
+
+
+
+
+
+
+//
+// END FUNCTIONS FOR HIDDEN AND OUTPUT LAYER ACTIVATIONS
+//
+
+
+
+//
+// BEGIN FUNCTIONS FOR BACK PROPAGATION
+//
+
+
+
 
 // feed the activations in the ith layer forward and compute the resulting activations in the (i+1)th layer using the function (*f).
-static void feed_fwd_H(int i, struct NEURAL_NET* my_net, void (*f)(double*, int)){
+static void feed_fwd_H(int i, NETWORK* my_net, void (*f)(double*, int)){
 	double* curr_L = my_net->activations_N[i];
 	double* next_L = my_net->activations_N[i+1];
 	double** wgt_matr_w = my_net->weights_W[i];
@@ -317,40 +374,9 @@ static void feed_fwd_H(int i, struct NEURAL_NET* my_net, void (*f)(double*, int)
 	(*f)(next_L, network[i+1]);
 }
 
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// print the output activations of the neural network
-void print_output(struct NEURAL_NET* my_net){
-
-	for (int i=0;i<network[*size-1];i++){
-		printf("%lf, ", my_net->activations_N[*size-1][i]);
-	}
-}
-
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// initialize the network with random weights and biases.
-struct NEURAL_NET* initialize_network(int* n, int* s){
-	network = n;
-	size = s;
-	
-	struct NEURAL_NET* net = malloc(sizeof*net);
-
-	net->activations_N = alloc_N();   // net->activations_N[i][j] is the activation of the jth neuron in the ith layer
-	net->biases_N = init_N('h');       // net->biases_N[i][j] is the bias of the jth neuron in the ith layer
-	net->weights_W = init_W('h');      // net->weights_W[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
-	net->gradients_W = init_W('r');     // net->gradients_W[i][j][k] is the computed gradient of the cost function wrt net->weights_W[i][j][k] after the last training iteration of the network. It is initialized to random values to avoid premature training termination.
-
-	return net;
-}
-
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
 
 // enter input data into first layer of network. Feed these activations forward throughout the rest of the network.
-void feed_fwd(double input[], struct NEURAL_NET* my_net){
+void feed_fwd(double input[], NETWORK* my_net){
 	int i;
 	double* first_L = my_net->activations_N[0];
 
@@ -365,31 +391,36 @@ void feed_fwd(double input[], struct NEURAL_NET* my_net){
 	feed_fwd_H(*size-2, my_net, &out_activ);
 }
 
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
 
-// check if the gradients in the network are all close to zero (below a set precision value). Return true if this is so. Return false otherwise.
-static int min_reached(struct NEURAL_NET* my_net){
+// update a structure of type W by adding another structure of type W to it.
+static void add_to_W(double*** cum_sum_W, double*** matr_W){
+    
+    for (int i=0;i<*size-1;i++){
 
-	double precision = 0.00000001;
+    	for (int j=0;j<network[i];j++){
 
-	for (int i=0;i<*size-1;i++){
+    		for (int k=0;k<network[i+1];k++){
+    		    cum_sum_W[i][j][k] += matr_W[i][j][k];
+    		}
+    	}
+    }
+}
+
+
+// update a structure of type N by adding another structure of type N to it.
+static void add_to_N(double** cum_sum_N, double** matr_N){
+
+	for (int i=0;i<*size;i++){
 
 		for (int j=0;j<network[i];j++){
-
-			for (int k=0;k<network[i+1];k++){
-			    if (my_net->gradients_W[i][j][k] > precision){
-			    	return 0;
-			    }
-			}
-	    }        
+			cum_sum_N[i][j] += matr_N[i][j];
+		}
 	}
-	return 1;
 }
 
 
 // same thing as feed_fwd_H but keeps track of intermediate values for layers.
-static void comp_grad_H_H(int i, struct NEURAL_NET* my_net, void (*f)(double*, int), double** itrmd_N){
+static void comp_grad_H_H(int i, NETWORK* my_net, void (*f)(double*, int), double** itrmd_N){
 	double* curr_L = my_net->activations_N[i];
 	double* next_L = my_net->activations_N[i+1];
 	double** wgt_matr_w = my_net->weights_W[i];
@@ -408,11 +439,9 @@ static void comp_grad_H_H(int i, struct NEURAL_NET* my_net, void (*f)(double*, i
 	(*f)(next_L, network[i+1]);
 }
 
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
 
 // same thing as feed_fwd but keeps track of intermediate values for layers.
-static void comp_grad_H(double input[], struct NEURAL_NET* my_net, double** itrmd_N){
+static void comp_grad_H(double input[], NETWORK* my_net, double** itrmd_N){
 	int i;
 
 	for (i=0;i<network[0];i++){
@@ -426,11 +455,9 @@ static void comp_grad_H(double input[], struct NEURAL_NET* my_net, double** itrm
 	comp_grad_H_H(*size-2, my_net, &out_activ, itrmd_N);
 }
 
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
 
 // compute the gradient of the cost function wrt the weights and wrt to the biases
-static struct GRADIENTS* comp_grad(double input[], double output[], struct NEURAL_NET* my_net){
+static struct GRADIENTS* comp_grad(double input[], double output[], NETWORK* my_net){
 	int i, j, k;
 
 	struct GRADIENTS* grad = malloc(sizeof*grad);
@@ -476,8 +503,8 @@ static struct GRADIENTS* comp_grad(double input[], double output[], struct NEURA
 		}
 	}
 
-	grad->dcdw_W = DCDW_W;   // grad->dcdw[i][j][k] is the partial derivative of the cost function wrt weights[i][j][k].
-	grad->dcdb_N = DCDB_N;   // grad->dcdb[i][j] is the partial derivative of the cost function wrt biases[i][j].
+	grad->W = DCDW_W;   // grad->dcdw[i][j][k] is the partial derivative of the cost function wrt weights[i][j][k].
+	grad->N = DCDB_N;   // grad->dcdb[i][j] is the partial derivative of the cost function wrt biases[i][j].
 
 	dealloc_N(itrmd_N);
 	dealloc_N(err_N);
@@ -485,50 +512,17 @@ static struct GRADIENTS* comp_grad(double input[], double output[], struct NEURA
 	return grad;
 }
 
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// update a structure of type W by adding another structure of type W to it.
-static void add_to_W(double*** cum_sum_W, double*** matr_W){
-    
-    for (int i=0;i<*size-1;i++){
-
-    	for (int j=0;j<network[i];j++){
-
-    		for (int k=0;k<network[i+1];k++){
-    		    cum_sum_W[i][j][k] += matr_W[i][j][k];
-    		}
-    	}
-    }
-}
-
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
-
-// update a structure of type N by adding another structure of type N to it.
-static void add_to_N(double** cum_sum_N, double** matr_N){
-
-	for (int i=0;i<*size;i++){
-
-		for (int j=0;j<network[i];j++){
-			cum_sum_N[i][j] += matr_N[i][j];
-		}
-	}
-}
-
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
 
 // compute the element-wise sum of all the gradients in a batch of training samples.
-static struct BATCH_GRADIENTS* sum_of_grads(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size){
-	struct BATCH_GRADIENTS* b_grad = malloc(sizeof*b_grad);
+static struct GRADIENTS* sum_of_grads(NETWORK* my_net, double** inputs, double** outputs, int start, int batch_size){
+	struct GRADIENTS* b_grad = malloc(sizeof*b_grad);
 
 	int j, k;
     int in_size = network[0];
     int out_size = network[*size-1];
 
-    double*** summation_dcdw_W = init_W('z');
-    double** summation_dcdb_N = init_N('z');
+    double*** summation_W = init_W('z');
+    double** summation_N = init_N('z');
 
     // compute cumulative sum of gradients for the batch
     for (j=start;j<start+batch_size;j++){
@@ -545,29 +539,64 @@ static struct BATCH_GRADIENTS* sum_of_grads(struct NEURAL_NET* my_net, double** 
 
         struct GRADIENTS* g = comp_grad(input, output, my_net);
 
-        add_to_W(summation_dcdw_W, g->dcdw_W);
-        add_to_N(summation_dcdb_N, g->dcdb_N);
+        add_to_W(summation_W, g->W);
+        add_to_N(summation_N, g->N);
 
-        dealloc_W(g->dcdw_W);
-        dealloc_N(g->dcdb_N);
+        dealloc_W(g->W);
+        dealloc_N(g->N);
 
         free(g);
     }
-    b_grad->sum_dcdw_W = summation_dcdw_W;
-    b_grad->sum_dcdb_N = summation_dcdb_N;
+    b_grad->W = summation_W;
+    b_grad->N = summation_N;
 
     return b_grad;
 }
 
-//---------------------------------------------------------------------------------------------
 
-//*********************************************************************************************
+
+
+
+//
+// END FUNCTIONS FOR BACK PROPAGATION
+//
+
+
+
+
+
+//
+// BEGIN FUNCTIONS FOR NETWORK TRAINING
+//
+
+
+// check if the gradients in the network are all close to zero (below a set precision value). Return 1 if this is so. Return 0 otherwise.
+static int min_reached(NETWORK* my_net){
+
+	double precision = 0.00000001;
+
+	for (int i=0;i<*size-1;i++){
+
+		for (int j=0;j<network[i];j++){
+
+			for (int k=0;k<network[i+1];k++){
+			    if (my_net->gradients_W[i][j][k] > precision){
+			    	return 0;
+			    }
+			}
+	    }        
+	}
+	return 1;
+}
+
+
+
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses mini batch SGD.
-static void train_batch(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size){
+static void train_batch(NETWORK* my_net, double** inputs, double** outputs, int start, int batch_size){
     int i, j, k;
 
-    struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
+    struct GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
 
 
     // update gradients_W in the NEURAL_NET struct 
@@ -576,7 +605,7 @@ static void train_batch(struct NEURAL_NET* my_net, double** inputs, double** out
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-			    my_net->gradients_W[i][j][k] = (1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];
+			    my_net->gradients_W[i][j][k] = (1.0/batch_size)*b_grad->W[i][j][k];
 			}
 	    }        
 	}
@@ -589,33 +618,31 @@ static void train_batch(struct NEURAL_NET* my_net, double** inputs, double** out
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-			   my_net->weights_W[i][j][k] -= alpha*(1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];
+			   my_net->weights_W[i][j][k] -= alpha*(1.0/batch_size)*b_grad->W[i][j][k];
 			}
 	    }               
 	}
 
-    dealloc_W(b_grad->sum_dcdw_W);
+    dealloc_W(b_grad->W);
 
     // apply mini batch SGD to biases
     for (i=1;i<*size;i++){
 
     	for (j=0;j<network[i];j++){
-    		    my_net->biases_N[i][j] -= alpha*(1.0/batch_size)*b_grad->sum_dcdb_N[i][j];
+    		    my_net->biases_N[i][j] -= alpha*(1.0/batch_size)*b_grad->N[i][j];
     	}
     }
 
-    dealloc_N(b_grad->sum_dcdb_N);
+    dealloc_N(b_grad->N);
     free(b_grad);
 }
 
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses mini batch SGD with momentum.
-static void train_batch_momentum(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** v_W, double** v_N){
+static void train_batch_momentum(NETWORK* my_net, double** inputs, double** outputs, int start, int batch_size, double*** v_W, double** v_N){
     int i, j, k;
 
-    struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
+    struct GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
 
     double beta = 0.9;   // exponential average hyperparameter
     double alpha = 0.1;  // learning rate
@@ -627,35 +654,33 @@ static void train_batch_momentum(struct NEURAL_NET* my_net, double** inputs, dou
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-				v_W[i][j][k] = beta*v_W[i][j][k] + (1.0-beta)*(1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];  // update the "velocity" of the gradient wrt the weights
+				v_W[i][j][k] = beta*v_W[i][j][k] + (1.0-beta)*(1.0/batch_size)*b_grad->W[i][j][k];  // update the "velocity" of the gradient wrt the weights
 			    my_net->weights_W[i][j][k] -= alpha*v_W[i][j][k];											 // update weights
 			}
 	    }               
 	}
 
-	dealloc_W(b_grad->sum_dcdw_W);
+	dealloc_W(b_grad->W);
 
     // apply momentum to biases
     for (i=1;i<*size;i++){
 
     	for (j=0;j<network[i];j++){
-    		v_N[i][j] = beta*v_N[i][j] + (1-beta)*(1.0/batch_size)*b_grad->sum_dcdb_N[i][j];	// compute the "velocity" of the gradients wrt the biases
+    		v_N[i][j] = beta*v_N[i][j] + (1-beta)*(1.0/batch_size)*b_grad->N[i][j];	// compute the "velocity" of the gradients wrt the biases
     		my_net->biases_N[i][j] -= alpha*v_N[i][j];											// update biases
     	}
     }
 
-    dealloc_N(b_grad->sum_dcdb_N);
+    dealloc_N(b_grad->N);
     free(b_grad);
 }
 
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses Adagrad optimizer.
-static void train_batch_adagrad(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** a_W, double** a_N){
+static void train_batch_adagrad(NETWORK* my_net, double** inputs, double** outputs, int start, int batch_size, double*** a_W, double** a_N){
     int i, j, k;
 
-    struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
+    struct GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
 
     // update gradients_W in the NEURAL_NET struct
 	for (i=0;i<*size-1;i++){
@@ -663,7 +688,7 @@ static void train_batch_adagrad(struct NEURAL_NET* my_net, double** inputs, doub
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-			    my_net->gradients_W[i][j][k] = (1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];
+			    my_net->gradients_W[i][j][k] = (1.0/batch_size)*b_grad->W[i][j][k];
 			}
 	    }        
 	}
@@ -677,35 +702,33 @@ static void train_batch_adagrad(struct NEURAL_NET* my_net, double** inputs, doub
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-				a_W[i][j][k] += pow((1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k], 2);												// compute the accumulated squared gradients wrt the weights
-			    my_net->weights_W[i][j][k] -= alpha*(1.0/sqrt(a_W[i][j][k] + eps))*(1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];	// update weights
+				a_W[i][j][k] += pow((1.0/batch_size)*b_grad->W[i][j][k], 2);												// compute the accumulated squared gradients wrt the weights
+			    my_net->weights_W[i][j][k] -= alpha*(1.0/sqrt(a_W[i][j][k] + eps))*(1.0/batch_size)*b_grad->W[i][j][k];	// update weights
 			}
 	    }               
 	}
 
-	dealloc_W(b_grad->sum_dcdw_W);
+	dealloc_W(b_grad->W);
 
     // apply adagrad to biases
     for (i=1;i<*size;i++){
 
     	for (j=0;j<network[i];j++){
-    		a_N[i][j] +=  pow((1.0/batch_size)*b_grad->sum_dcdb_N[i][j], 2);										// compute the accumulated squared gradients wrt the biases
-    		my_net->biases_N[i][j] -= alpha*(1.0/sqrt(a_N[i][j] + eps))*(1.0/batch_size)*b_grad->sum_dcdb_N[i][j];  // update biases
+    		a_N[i][j] +=  pow((1.0/batch_size)*b_grad->N[i][j], 2);										// compute the accumulated squared gradients wrt the biases
+    		my_net->biases_N[i][j] -= alpha*(1.0/sqrt(a_N[i][j] + eps))*(1.0/batch_size)*b_grad->N[i][j];  // update biases
     	}
     }
 
-    dealloc_N(b_grad->sum_dcdb_N);
+    dealloc_N(b_grad->N);
     free(b_grad);
 }
 
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses RMSprop optimizer
-static void train_batch_RMSprop(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** s_W, double** s_N){
+static void train_batch_RMSprop(NETWORK* my_net, double** inputs, double** outputs, int start, int batch_size, double*** s_W, double** s_N){
     int i, j, k;
 
-    struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
+    struct GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
 
     // update gradients_W in the NEURAL_NET struct
 	for (i=0;i<*size-1;i++){
@@ -713,7 +736,7 @@ static void train_batch_RMSprop(struct NEURAL_NET* my_net, double** inputs, doub
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-			    my_net->gradients_W[i][j][k] = (1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];
+			    my_net->gradients_W[i][j][k] = (1.0/batch_size)*b_grad->W[i][j][k];
 			}
 	    }        
 	}
@@ -728,36 +751,34 @@ static void train_batch_RMSprop(struct NEURAL_NET* my_net, double** inputs, doub
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-				s_W[i][j][k] = beta*s_W[i][j][k] + (1.0 - beta)*pow((1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k], 2); 				// update the exponential average of the squared gradients wrt the weights
+				s_W[i][j][k] = beta*s_W[i][j][k] + (1.0 - beta)*pow((1.0/batch_size)*b_grad->W[i][j][k], 2); 				// update the exponential average of the squared gradients wrt the weights
 
-			   	my_net->weights_W[i][j][k] -= alpha*(1.0/sqrt(s_W[i][j][k] + eps))*(1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k] ;	// update the weights
+			   	my_net->weights_W[i][j][k] -= alpha*(1.0/sqrt(s_W[i][j][k] + eps))*(1.0/batch_size)*b_grad->W[i][j][k] ;	// update the weights
 			}
 	    }               
 	}
 
-	dealloc_W(b_grad->sum_dcdw_W);
+	dealloc_W(b_grad->W);
 
     // apply RMSprop to biases
     for (i=1;i<*size;i++){
 
     	for (j=0;j<network[i];j++){
-    			s_N[i][j]  = beta*s_N[i][j] + (1.0 - beta)*pow((1.0/batch_size)*b_grad->sum_dcdb_N[i][j], 2);				// update the exponential average of the squared gradients wrt the biases
-    		    my_net->biases_N[i][j] -= alpha*(1.0/sqrt(s_N[i][j] + eps))*(1.0/batch_size)*b_grad->sum_dcdb_N[i][j];		// update biases
+    			s_N[i][j]  = beta*s_N[i][j] + (1.0 - beta)*pow((1.0/batch_size)*b_grad->N[i][j], 2);				// update the exponential average of the squared gradients wrt the biases
+    		    my_net->biases_N[i][j] -= alpha*(1.0/sqrt(s_N[i][j] + eps))*(1.0/batch_size)*b_grad->N[i][j];		// update biases
     	}
     }
 
-    dealloc_N(b_grad->sum_dcdb_N);
+    dealloc_N(b_grad->N);
     free(b_grad);
 }
 
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses RMSprop optimizer
-static void train_batch_adadelta(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** s_W, double** s_N, double*** deltas_W, double** deltas_N, double*** D_W, double** D_N){
+static void train_batch_adadelta(NETWORK* my_net, double** inputs, double** outputs, int start, int batch_size, double*** s_W, double** s_N, double*** deltas_W, double** deltas_N, double*** D_W, double** D_N){
     int i, j, k;
 
-    struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
+    struct GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
 
     // update gradients_W in the NEURAL_NET struct
 	for (i=0;i<*size-1;i++){
@@ -765,7 +786,7 @@ static void train_batch_adadelta(struct NEURAL_NET* my_net, double** inputs, dou
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-			    my_net->gradients_W[i][j][k] = (1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];
+			    my_net->gradients_W[i][j][k] = (1.0/batch_size)*b_grad->W[i][j][k];
 			}
 	    }        
 	}
@@ -780,43 +801,41 @@ static void train_batch_adadelta(struct NEURAL_NET* my_net, double** inputs, dou
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-				s_W[i][j][k] = beta*s_W[i][j][k] + (1.0 - beta)*pow((1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k], 2);							// update the exponential average of the squared gradients wrt the weights
+				s_W[i][j][k] = beta*s_W[i][j][k] + (1.0 - beta)*pow((1.0/batch_size)*b_grad->W[i][j][k], 2);							// update the exponential average of the squared gradients wrt the weights
 
-			    my_net->weights_W[i][j][k] -= (sqrt(D_W[i][j][k]+eps)/sqrt(s_W[i][j][k] + eps))*(1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k] ;  // update the weights
+			    my_net->weights_W[i][j][k] -= (sqrt(D_W[i][j][k]+eps)/sqrt(s_W[i][j][k] + eps))*(1.0/batch_size)*b_grad->W[i][j][k] ;  // update the weights
 
-			    deltas_W[i][j][k] = -(sqrt(D_W[i][j][k]+eps)/sqrt(s_W[i][j][k] + eps))*(1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];			// update the delta_weight for this iteration
+			    deltas_W[i][j][k] = -(sqrt(D_W[i][j][k]+eps)/sqrt(s_W[i][j][k] + eps))*(1.0/batch_size)*b_grad->W[i][j][k];			// update the delta_weight for this iteration
 			    D_W[i][j][k] = beta*D_W[i][j][k] + (1.0 - beta)*pow(deltas_W[i][j][k], 2);														// update the numerator that will multiply the gradient in the next iteration
 			}
 	    }               
 	}
 
-	dealloc_W(b_grad->sum_dcdw_W);
+	dealloc_W(b_grad->W);
 
     // apply adadelta to biases
     for (i=1;i<*size;i++){
 
     	for (j=0;j<network[i];j++){
-    			s_N[i][j]  = beta*s_N[i][j] + (1.0 - beta)*pow((1.0/batch_size)*b_grad->sum_dcdb_N[i][j], 2);						// update the exponential average of the squared gradients wrt the biases
+    			s_N[i][j]  = beta*s_N[i][j] + (1.0 - beta)*pow((1.0/batch_size)*b_grad->N[i][j], 2);						// update the exponential average of the squared gradients wrt the biases
 
-    		    my_net->biases_N[i][j] -= (sqrt(D_N[i][j]+eps)/sqrt(s_N[i][j] + eps))*(1.0/batch_size)*b_grad->sum_dcdb_N[i][j];    // update biases
+    		    my_net->biases_N[i][j] -= (sqrt(D_N[i][j]+eps)/sqrt(s_N[i][j] + eps))*(1.0/batch_size)*b_grad->N[i][j];    // update biases
 
-    		    deltas_N[i][j] = (sqrt(D_N[i][j]+eps)/sqrt(s_N[i][j] + eps))*(1.0/batch_size)*b_grad->sum_dcdb_N[i][j]; 			// update the delta_bias 
+    		    deltas_N[i][j] = (sqrt(D_N[i][j]+eps)/sqrt(s_N[i][j] + eps))*(1.0/batch_size)*b_grad->N[i][j]; 			// update the delta_bias 
     		    D_N[i][j] = beta*D_N[i][j] + (1.0 -beta)*pow(deltas_N[i][j], 2);													// update the numerator that will multiply the gradient in the next iteration
     	}
     }
 
-    dealloc_N(b_grad->sum_dcdb_N);
+    dealloc_N(b_grad->N);
     free(b_grad);
 }
 
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses Adam optimizer
-static void train_batch_adam(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** m_W, double*** mhat_W, double** m_N, double** mhat_N,  double*** v_W, double*** vhat_W, double** v_N, double** vhat_N, int iter_no){
+static void train_batch_adam(NETWORK* my_net, double** inputs, double** outputs, int start, int batch_size, double*** m_W, double*** mhat_W, double** m_N, double** mhat_N,  double*** v_W, double*** vhat_W, double** v_N, double** vhat_N, int iter_no){
     int i, j, k;
 
-    struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
+    struct GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
 
     // update gradients_W in the NEURAL_NET struct
 	for (i=0;i<*size-1;i++){
@@ -824,7 +843,7 @@ static void train_batch_adam(struct NEURAL_NET* my_net, double** inputs, double*
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-			    my_net->gradients_W[i][j][k] = (1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];
+			    my_net->gradients_W[i][j][k] = (1.0/batch_size)*b_grad->W[i][j][k];
 			}
 	    }        
 	}
@@ -841,10 +860,10 @@ static void train_batch_adam(struct NEURAL_NET* my_net, double** inputs, double*
 		for (j=0;j<network[i];j++){
 
 			for (k=0;k<network[i+1];k++){
-			    m_W[i][j][k] = beta1*m_W[i][j][k] + (1.0 - beta1)*(1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k];         // update 1st moment vector
+			    m_W[i][j][k] = beta1*m_W[i][j][k] + (1.0 - beta1)*(1.0/batch_size)*b_grad->W[i][j][k];         // update 1st moment vector
 			    mhat_W[i][j][k] = m_W[i][j][k]/(1.0 - pow(beta1, iter_no));                                             // fill in mhat
 
-			    v_W[i][j][k] = beta2*v_W[i][j][k] + (1.0 - beta2)*pow((1.0/batch_size)*b_grad->sum_dcdw_W[i][j][k], 2); // update 2nd moment vector
+			    v_W[i][j][k] = beta2*v_W[i][j][k] + (1.0 - beta2)*pow((1.0/batch_size)*b_grad->W[i][j][k], 2); // update 2nd moment vector
 			    vhat_W[i][j][k] = v_W[i][j][k]/(1.0 - pow(beta2, iter_no));												// fill in vhat
 
 			    my_net->weights_W[i][j][k] -= alpha*(1.0/(sqrt(vhat_W[i][j][k]) + eps))*mhat_W[i][j][k];				// update weights
@@ -853,16 +872,16 @@ static void train_batch_adam(struct NEURAL_NET* my_net, double** inputs, double*
 	}
 
 
-	dealloc_W(b_grad->sum_dcdw_W);
+	dealloc_W(b_grad->W);
 
 	// apply adam algorithm to biases
     for (i=1;i<*size;i++){
 
     	for (j=0;j<network[i];j++){
-    		    m_N[i][j]  = beta1*m_N[i][j] + (1.0 - beta1)*(1.0/batch_size)*b_grad->sum_dcdb_N[i][j];				// update 1st moment 
+    		    m_N[i][j]  = beta1*m_N[i][j] + (1.0 - beta1)*(1.0/batch_size)*b_grad->N[i][j];				// update 1st moment 
     		    mhat_N[i][j]  = m_N[i][j]/(1.0 - pow(beta1, iter_no));												// fill in mhat
 
-    		    v_N[i][j]  = beta2*v_N[i][j] + (1.0 - beta2)*pow((1.0/batch_size)*b_grad->sum_dcdb_N[i][j], 2);		// update 2nd moment
+    		    v_N[i][j]  = beta2*v_N[i][j] + (1.0 - beta2)*pow((1.0/batch_size)*b_grad->N[i][j], 2);		// update 2nd moment
     		    vhat_N[i][j]  = v_N[i][j]/(1.0 - pow(beta2, iter_no));												// fill in vhat
 
     		    my_net->biases_N[i][j] -= alpha*(1.0/(sqrt(vhat_N[i][j]) + eps))*(1.0/batch_size)*mhat_N[i][j];		// update biases
@@ -870,15 +889,15 @@ static void train_batch_adam(struct NEURAL_NET* my_net, double** inputs, double*
     }
 
 
-    dealloc_N(b_grad->sum_dcdb_N);
+    dealloc_N(b_grad->N);
     free(b_grad);
 }
 
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
+
+
 
 // train the network
-void train_network(struct NEURAL_NET* my_net, double** inputs, double** outputs, int no_of_inputs, int batch_size, int epochs, int optimizer){
+void train_network(NETWORK* my_net, double** inputs, double** outputs, int no_of_inputs, int batch_size, int epochs, int optimizer){
 	int i,j;
 	int iterations = ceil(no_of_inputs/batch_size);
 	int remaining_samples = no_of_inputs%batch_size;
@@ -1237,23 +1256,25 @@ void train_network(struct NEURAL_NET* my_net, double** inputs, double** outputs,
 	return;
 }
 
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
 
-// dealloc memory associated with network
-void free_network(struct NEURAL_NET* my_net){
-	dealloc_N(my_net->activations_N);
-	dealloc_N(my_net->biases_N);
-	dealloc_W(my_net->weights_W);
-   dealloc_W(my_net->gradients_W);
-	free(my_net);
-}
 
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
+
+//
+// END FUNCTIONS FOR NETWORK TRAINING
+//
+
+
+
+//
+// BEGIN FUNCTIONS TO EXPORT/IMPORT NEURAL NET WEIGHTS/BIASES
+//
+
+
+
+
 
 // export weights to txt file of comma separated values
-void export_weights(struct NEURAL_NET*my_net, char* filename){
+void export_weights(NETWORK* my_net, char* filename){
 	int i, j, k;
 	FILE *fp;
 	fp = fopen(filename, "w+");
@@ -1271,11 +1292,9 @@ void export_weights(struct NEURAL_NET*my_net, char* filename){
 	fclose(fp);
 }
 
-//---------------------------------------------------------------------------------------------
-//*********************************************************************************************
 
 // export biases to txt file of comma separated values
-void export_biases(struct NEURAL_NET*my_net, char* filename){
+void export_biases(NETWORK* my_net, char* filename){
 	int i, j, k;
 	FILE *fp;
 	fp = fopen(filename, "w+");
@@ -1298,11 +1317,9 @@ void export_biases(struct NEURAL_NET*my_net, char* filename){
 	fclose(fp);
 }
 
-//---------------------------------------------------------------------------------------------
-//********************************************************************************************
 
 // import weights from txt file of comma separated values
-void import_weights(struct NEURAL_NET* my_net, char* filename){
+void import_weights(NETWORK* my_net, char* filename){
 	int i,j, k;
 	int buf_size = 10000;
 	char buf[buf_size];
@@ -1405,11 +1422,9 @@ void import_weights(struct NEURAL_NET* my_net, char* filename){
 	return;
 }
 
-//---------------------------------------------------------------------------------------------
-//********************************************************************************************
 
 // import weights from txt file of comma separated values
-void import_biases(struct NEURAL_NET* my_net, char* filename){
+void import_biases(NETWORK* my_net, char* filename){
 
 	int i, j, k;
 	int buf_size = 10000;
@@ -1474,4 +1489,21 @@ void import_biases(struct NEURAL_NET* my_net, char* filename){
 	my_net->biases_N = biases;
 	return;
 }
-//---------------------------------------------------------------------------------------------
+
+
+
+
+
+
+//
+// END FUNCTIONS TO EXPORT/IMPORT NEURAL NET WEIGHTS/BIASES
+//
+
+
+// print the output activations of the neural network
+void print_output(NETWORK* my_net){
+
+	for (int i=0;i<network[*size-1];i++){
+		printf("%lf, ", my_net->activations_N[*size-1][i]);
+	}
+}
