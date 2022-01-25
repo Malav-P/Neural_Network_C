@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-
+#include "nn_functions.h"
 
 
 // declare global pointers *network and *size
@@ -10,15 +10,6 @@
 // network points to first element in an arry of int. Each entry corresponds to number of neurons in the neural net layer.
 int* network;
 int* size;
-
-
-// declare a struct for the neural net.
-struct NEURAL_NET{
-	double** activations_N;  // an order two pointer. activations_N[i][j] is the activation for the jth neuron in the ith layer.
-	double** biases_N;       // an order two pointer. biases_N[i][j] is the bias for the jth neuron in the ith layer.
-	double*** weights_W;     // an order three pointer. weights_W[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer
-	double*** gradients_W;   // an order three pointer. gradients_W[i][j][k] is the gradient of the cost function wrt weights_W[i][j][k] that was computed in the last iteration of training the network
-};
 
 // declare a struct for the gradients to be computed in back_propagation
 struct GRADIENTS{
@@ -35,7 +26,7 @@ struct BATCH_GRADIENTS{
 //*********************************************************
 
 // applies activation function to a structure of type L. I have chosen the relU function
-void activ(double* lyr_L, int len){
+static void activ(double* lyr_L, int len){
 
 	for (int i=0;i<len;i++){
 
@@ -50,7 +41,7 @@ void activ(double* lyr_L, int len){
 //*********************************************************
 
 // derivative of activation function for hidden layer. I have chosen the derivative of the relU function
-double activ_deriv(double x){
+static double activ_deriv(double x){
 
 	if (x<0){
 		return 0.0;
@@ -65,7 +56,7 @@ double activ_deriv(double x){
 //*********************************************************
 
 // applies activation function to output layer in neural network (which has structure type L). I have chosen the softmax activation function.
-void out_activ(double* lyr_L, int len){
+static void out_activ(double* lyr_L, int len){
 	double sum = 0;
 	int i;
 
@@ -82,7 +73,7 @@ void out_activ(double* lyr_L, int len){
 //*********************************************************
 
 // given a layer lyr_L of structure type L and and index i, this function returns the derivative of the softmax function wrt to the variable in the (index)th position of lyr_L
-double out_activ_deriv(double* lyr_L, int len, int index){
+static double out_activ_deriv(double* lyr_L, int len, int index){
 
 	double sum = 0;
 	double x = lyr_L[index];
@@ -98,7 +89,7 @@ double out_activ_deriv(double* lyr_L, int len, int index){
 //**********************************************************
 
 // generate a random value from a uniform distribution between 0 and 1
-double rand_gen() {
+static double rand_gen() {
    // return a uniformly distributed random value
    return ( (double)(rand()) + 1. )/( (double)(RAND_MAX) + 1. );
 }
@@ -107,7 +98,7 @@ double rand_gen() {
 //*********************************************************
 
 // generate a random value from the standard normal distribution
-double normalRandom() {
+static double normalRandom() {
    // return a normally distributed random value
    double v1=rand_gen();
    double v2=rand_gen();
@@ -118,7 +109,7 @@ double normalRandom() {
 //*********************************************************
 
 // returns a random number from the range (min, max)
-double randfrom(double min, double max){
+static double randfrom(double min, double max){
     double range = (max - min); 
     double div = RAND_MAX / range;
 
@@ -130,7 +121,7 @@ double randfrom(double min, double max){
 
 // allocate memory in a shape of type N. N is usually a network of neurons.
 // ptr_N[i][j] is the jth neuron in the ith layer
-double** alloc_N(){
+static double** alloc_N(){
 
    double** ptr_N = (double**)calloc(*size, sizeof(double*));
 
@@ -144,7 +135,7 @@ double** alloc_N(){
 //**********************************************************************************************
 
 // deallocate memory of a structure of type N.
-void dealloc_N(double** ptr_N){
+static void dealloc_N(double** ptr_N){
 
    for (int i=0;i<*size;i++){
       free(ptr_N[i]);
@@ -157,7 +148,7 @@ void dealloc_N(double** ptr_N){
 
 // allocate memory for a structure of type N. Initialize all entries
 // ptr_N[i][j] is the entry for the jth neuron in the ith layer.
-double** init_N(char c){
+static double** init_N(char c){
    double** ptr_N = alloc_N();
 
    switch(c){
@@ -201,7 +192,7 @@ double** init_N(char c){
 
 // allocate memory for a structure of type w. w is a matrix  that can hold the weights connecting two structures of type L.
 // ptr_w[j][k] is the entry connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
-double** alloc_w(int i){
+static double** alloc_w(int i){
 
    double** ptr_w = (double**)calloc(network[i], sizeof(double*));
 
@@ -215,7 +206,7 @@ double** alloc_w(int i){
 //*********************************************************************************************
 
 // deallocate memory that was previously allocated using alloc_w.
-void dealloc_w(double** ptr_w, int i){
+static void dealloc_w(double** ptr_w, int i){
 
    for (int j=0;j<network[i];j++){
       free(ptr_w[j]);
@@ -229,7 +220,7 @@ void dealloc_w(double** ptr_w, int i){
 
 // allocate memory for a structure of type W. W can be thought of as a list of structure type w.
 // ptr_W[i][j][k] is the entry connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
-double*** alloc_W(){
+static double*** alloc_W(){
 
    double*** ptr_W = (double***)calloc(*size-1, sizeof(double**));
 
@@ -244,7 +235,7 @@ double*** alloc_W(){
 //*********************************************************************************************
 
 // deallocate memory for a previously allocated structure of type W.
-void dealloc_W(double*** ptr_W){
+static void dealloc_W(double*** ptr_W){
 
    for (int i=0;i<*size-1;i++){
       dealloc_w(ptr_W[i], i);
@@ -257,7 +248,7 @@ void dealloc_W(double*** ptr_W){
 
 // allocate memory for a structure of type W and initialize all entries
 // ptr_W[i][j][k] is the weight connecting the kth neuron in the (i+1)th layer to the jth neuron in the ith layer.
-double*** init_W(char c){
+static double*** init_W(char c){
    double*** ptr_W = alloc_W();
 
    switch(c){
@@ -308,7 +299,7 @@ double*** init_W(char c){
 //*********************************************************************************************
 
 // feed the activations in the ith layer forward and compute the resulting activations in the (i+1)th layer using the function (*f).
-void feed_fwd_H(int i, struct NEURAL_NET* my_net, void (*f)(double*, int)){
+static void feed_fwd_H(int i, struct NEURAL_NET* my_net, void (*f)(double*, int)){
 	double* curr_L = my_net->activations_N[i];
 	double* next_L = my_net->activations_N[i+1];
 	double** wgt_matr_w = my_net->weights_W[i];
@@ -378,7 +369,7 @@ void feed_fwd(double input[], struct NEURAL_NET* my_net){
 //*********************************************************************************************
 
 // check if the gradients in the network are all close to zero (below a set precision value). Return true if this is so. Return false otherwise.
-int min_reached(struct NEURAL_NET* my_net){
+static int min_reached(struct NEURAL_NET* my_net){
 
 	double precision = 0.00000001;
 
@@ -396,12 +387,9 @@ int min_reached(struct NEURAL_NET* my_net){
 	return 1;
 }
 
-//---------------------------------------------------------------------------------------------
-// BEGIN HELPER FUNCTION DEFINITIONS-------------------------------------------
-//*********************************************************************************************
 
 // same thing as feed_fwd_H but keeps track of intermediate values for layers.
-void comp_grad_H_H(int i, struct NEURAL_NET* my_net, void (*f)(double*, int), double** itrmd_N){
+static void comp_grad_H_H(int i, struct NEURAL_NET* my_net, void (*f)(double*, int), double** itrmd_N){
 	double* curr_L = my_net->activations_N[i];
 	double* next_L = my_net->activations_N[i+1];
 	double** wgt_matr_w = my_net->weights_W[i];
@@ -424,7 +412,7 @@ void comp_grad_H_H(int i, struct NEURAL_NET* my_net, void (*f)(double*, int), do
 //*********************************************************************************************
 
 // same thing as feed_fwd but keeps track of intermediate values for layers.
-void comp_grad_H(double input[], struct NEURAL_NET* my_net, double** itrmd_N){
+static void comp_grad_H(double input[], struct NEURAL_NET* my_net, double** itrmd_N){
 	int i;
 
 	for (i=0;i<network[0];i++){
@@ -442,7 +430,7 @@ void comp_grad_H(double input[], struct NEURAL_NET* my_net, double** itrmd_N){
 //*********************************************************************************************
 
 // compute the gradient of the cost function wrt the weights and wrt to the biases
-struct GRADIENTS* comp_grad(double input[], double output[], struct NEURAL_NET* my_net){
+static struct GRADIENTS* comp_grad(double input[], double output[], struct NEURAL_NET* my_net){
 	int i, j, k;
 
 	struct GRADIENTS* grad = malloc(sizeof*grad);
@@ -501,7 +489,7 @@ struct GRADIENTS* comp_grad(double input[], double output[], struct NEURAL_NET* 
 //*********************************************************************************************
 
 // update a structure of type W by adding another structure of type W to it.
-void add_to_W(double*** cum_sum_W, double*** matr_W){
+static void add_to_W(double*** cum_sum_W, double*** matr_W){
     
     for (int i=0;i<*size-1;i++){
 
@@ -518,7 +506,7 @@ void add_to_W(double*** cum_sum_W, double*** matr_W){
 //*********************************************************************************************
 
 // update a structure of type N by adding another structure of type N to it.
-void add_to_N(double** cum_sum_N, double** matr_N){
+static void add_to_N(double** cum_sum_N, double** matr_N){
 
 	for (int i=0;i<*size;i++){
 
@@ -532,7 +520,7 @@ void add_to_N(double** cum_sum_N, double** matr_N){
 //*********************************************************************************************
 
 // compute the element-wise sum of all the gradients in a batch of training samples.
-struct BATCH_GRADIENTS* sum_of_grads(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size){
+static struct BATCH_GRADIENTS* sum_of_grads(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size){
 	struct BATCH_GRADIENTS* b_grad = malloc(sizeof*b_grad);
 
 	int j, k;
@@ -573,18 +561,10 @@ struct BATCH_GRADIENTS* sum_of_grads(struct NEURAL_NET* my_net, double** inputs,
 
 //---------------------------------------------------------------------------------------------
 
-
-
-
-// END HELPER FUNCTION DEFINTIONS------------------------------------------------
-
-
-
-
 //*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses mini batch SGD.
-void train_batch(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size){
+static void train_batch(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size){
     int i, j, k;
 
     struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
@@ -632,7 +612,7 @@ void train_batch(struct NEURAL_NET* my_net, double** inputs, double** outputs, i
 //*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses mini batch SGD with momentum.
-void train_batch_momentum(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** v_W, double** v_N){
+static void train_batch_momentum(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** v_W, double** v_N){
     int i, j, k;
 
     struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
@@ -672,7 +652,7 @@ void train_batch_momentum(struct NEURAL_NET* my_net, double** inputs, double** o
 //*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses Adagrad optimizer.
-void train_batch_adagrad(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** a_W, double** a_N){
+static void train_batch_adagrad(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** a_W, double** a_N){
     int i, j, k;
 
     struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
@@ -722,7 +702,7 @@ void train_batch_adagrad(struct NEURAL_NET* my_net, double** inputs, double** ou
 //*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses RMSprop optimizer
-void train_batch_RMSprop(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** s_W, double** s_N){
+static void train_batch_RMSprop(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** s_W, double** s_N){
     int i, j, k;
 
     struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
@@ -774,7 +754,7 @@ void train_batch_RMSprop(struct NEURAL_NET* my_net, double** inputs, double** ou
 //*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses RMSprop optimizer
-void train_batch_adadelta(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** s_W, double** s_N, double*** deltas_W, double** deltas_N, double*** D_W, double** D_N){
+static void train_batch_adadelta(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** s_W, double** s_N, double*** deltas_W, double** deltas_N, double*** D_W, double** D_N){
     int i, j, k;
 
     struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
@@ -833,7 +813,7 @@ void train_batch_adadelta(struct NEURAL_NET* my_net, double** inputs, double** o
 //*********************************************************************************************
 
 // train the network on a subset window of the training data. This subset window is defined as the (start)th input to the (start+batch_size)th input. This uses Adam optimizer
-void train_batch_adam(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** m_W, double*** mhat_W, double** m_N, double** mhat_N,  double*** v_W, double*** vhat_W, double** v_N, double** vhat_N, int iter_no){
+static void train_batch_adam(struct NEURAL_NET* my_net, double** inputs, double** outputs, int start, int batch_size, double*** m_W, double*** mhat_W, double** m_N, double** mhat_N,  double*** v_W, double*** vhat_W, double** v_N, double** vhat_N, int iter_no){
     int i, j, k;
 
     struct BATCH_GRADIENTS* b_grad = sum_of_grads(my_net, inputs, outputs, start, batch_size);
