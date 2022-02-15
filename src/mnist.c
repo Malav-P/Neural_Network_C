@@ -48,7 +48,7 @@ struct DATA* load_mnist(){
     char* ptr;
     char* tok;
 
-    fp = fopen("mnist_test.csv","r");
+    fp = fopen("data/mnist_test.csv","r");
 
     if(fp == NULL){
       perror("Error opening file");
@@ -76,7 +76,7 @@ struct DATA* load_mnist(){
     fclose(fp);
 
 
-    fp = fopen("mnist_train.csv","r");
+    fp = fopen("data/mnist_train.csv","r");
 
     if(fp == NULL) {
       perror("Error opening file");
@@ -167,10 +167,15 @@ void test_network(struct NEURAL_NET* my_net, struct DATA* my_data){
 }
 
 
-int main(){
+int main(int argc, char** argv){
+
+    if (argc != 2){
+        fprintf(stderr, "usage is main <optimizer>\n");
+        return -1;
+    }
     int batch_size = 50;
     int epochs = 3;
-    int optimizer = 3;
+    int optimizer = atoi(argv[1]);
 
     struct DATA* my_data = load_mnist();
 
@@ -182,8 +187,8 @@ int main(){
     train_network(my_net, my_data->train_images, my_data->train_labels, N_TRAIN, batch_size, epochs, optimizer);
     test_network(my_net, my_data);
 
-    export_weights(my_net, "weights.txt");
-    export_biases(my_net, "biases.txt");
+    export_weights(my_net, "weights_biases/weights.txt");
+    export_biases(my_net, "weights_biases/biases.txt");
 
     free_network(my_net);
 }
