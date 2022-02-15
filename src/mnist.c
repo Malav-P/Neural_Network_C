@@ -170,7 +170,7 @@ void test_network(struct NEURAL_NET* my_net, struct DATA* my_data){
 int main(int argc, char** argv){
 
     if (argc != 2){
-        fprintf(stderr, "usage is main <optimizer>\n");
+        fprintf(stderr, "usage is bin/mnist.exe <optimizer>\n");
         return -1;
     }
     int batch_size = 50;
