@@ -51,7 +51,7 @@ struct DATA* load_mnist(){
     fp = fopen("data/mnist_test.csv","r");
 
     if(fp == NULL){
-      perror("Error opening file");
+      perror("Error opening file\n");
       exit(1);
     }
 
