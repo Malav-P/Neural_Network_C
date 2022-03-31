@@ -518,37 +518,37 @@ static struct GRADIENTS* sum_of_grads(NETWORK* my_net, double** inputs, double**
 	struct GRADIENTS* b_grad = malloc(sizeof*b_grad);
 
 	int j, k;
-    int in_size = network[0];
-    int out_size = network[*size-1];
+	 int in_size = network[0];
+	 int out_size = network[*size-1];
 
-    double*** summation_W = init_W('z');
-    double** summation_N = init_N('z');
+	 double*** summation_W = init_W('z');
+	 double** summation_N = init_N('z');
 
-    // compute cumulative sum of gradients for the batch
-    for (j=start;j<start+batch_size;j++){
-        double input[in_size];
-        double output[out_size];
+	 // compute cumulative sum of gradients for the batch
+	 for (j=start;j<start+batch_size;j++){
+	     double input[in_size];
+	     double output[out_size];
 
-        for (k=0;k<in_size;k++){
-        	input[k] = inputs[j][k];
-        }
+	     for (k=0;k<in_size;k++){
+	     	input[k] = inputs[j][k];
+	     }
 
-        for (k=0;k<out_size;k++){
-        	output[k] = outputs[j][k];
-        }
+	     for (k=0;k<out_size;k++){
+	     	output[k] = outputs[j][k];
+	     }
 
-        struct GRADIENTS* g = comp_grad(input, output, my_net);
+	     struct GRADIENTS* g = comp_grad(input, output, my_net);
 
-        add_to_W(summation_W, g->W);
-        add_to_N(summation_N, g->N);
+	     add_to_W(summation_W, g->W);
+	     add_to_N(summation_N, g->N);
 
-        dealloc_W(g->W);
-        dealloc_N(g->N);
+	     dealloc_W(g->W);
+	     dealloc_N(g->N);
 
-        free(g);
-    }
-    b_grad->W = summation_W;
-    b_grad->N = summation_N;
+	     free(g);
+	 }
+	 b_grad->W = summation_W;
+	 b_grad->N = summation_N;
 
     return b_grad;
 }
@@ -902,7 +902,6 @@ void train_network(NETWORK* my_net, double** inputs, double** outputs, int no_of
 	int iterations = ceil(no_of_inputs/batch_size);
 	int remaining_samples = no_of_inputs - (batch_size*(iterations-1));
 
-
 		
 	for (j=0;j<epochs;j++){
       switch(optimizer){
@@ -1170,6 +1169,11 @@ void import_weights(NETWORK* my_net, char* filename){
 		}
 	} while(!feof(fp));
 
+	if (count != *size - 1){
+		fprintf(stderr, "Error: number of adjacency matrices (%d) does not match that of the network structure (%d)\n", count, *size-1);
+		exit(-1);
+	}
+
 
 	int matr_cols[count];
 
@@ -1212,14 +1216,17 @@ void import_weights(NETWORK* my_net, char* filename){
 	matr_rows[count-1] = j-1;
 
 
-	double*** weights = (double***)calloc(count, sizeof(double**));
 
-	for (i=0;i<count;i++){
-		weights[i] = (double**)calloc(matr_rows[i], sizeof(double*));
-		for (j=0;j<matr_rows[i];j++){
-			weights[i][j] = (double*)calloc(matr_cols[i], sizeof(double));
-		}
-	}
+	// double*** weights = (double***)calloc(count, sizeof(double**));
+
+	// for (i=0;i<count;i++){
+	// 	weights[i] = (double**)calloc(matr_rows[i], sizeof(double*));
+	// 	for (j=0;j<matr_rows[i];j++){
+	// 		weights[i][j] = (double*)calloc(matr_cols[i], sizeof(double));
+	// 	}
+	// }
+
+	double *** weights = my_net->weights_W;
 
 	rewind(fp);
 
@@ -1243,9 +1250,9 @@ void import_weights(NETWORK* my_net, char* filename){
 	free(start_posns);
 	fclose(fp);
 
-	dealloc_W(my_net->weights_W);
+	// dealloc_W(my_net->weights_W);
 	
-	my_net->weights_W = weights;
+	// my_net->weights_W = weights;
 
 	return;
 }
@@ -1289,11 +1296,13 @@ void import_biases(NETWORK* my_net, char* filename){
 		line_length[i] = j;
 	}
 
-	double** biases = (double**)calloc(count, sizeof(double*));
+	// double** biases = (double**)calloc(count, sizeof(double*));
 
-	for (i=0; i<count; i++){
-		biases[i] = (double*)calloc(line_length[i], sizeof(double));
-	}
+	// for (i=0; i<count; i++){
+	// 	biases[i] = (double*)calloc(line_length[i], sizeof(double));
+	// }
+
+	double** biases = my_net->biases_N;
 
 	rewind(fp);
 
@@ -1312,15 +1321,11 @@ void import_biases(NETWORK* my_net, char* filename){
 
 	fclose(fp);
 
-	dealloc_N(my_net->biases_N);
+	// dealloc_N(my_net->biases_N);
 
-	my_net->biases_N = biases;
+	// my_net->biases_N = biases;
 	return;
 }
-
-
-
-
 
 
 //

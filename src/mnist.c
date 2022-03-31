@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 #include "nn_functions.h"
 
@@ -45,7 +46,6 @@ struct DATA* load_mnist(){
     int row, col;
 
     char buf[10000];
-    char* ptr;
     char* tok;
 
     fp = fopen("data/mnist_test.csv","r");
@@ -67,7 +67,7 @@ struct DATA* load_mnist(){
 
         tok = strtok(NULL, ",");
         while (tok != NULL){
-            test_image_ptr[row][col] = strtod(tok, &ptr)/255.0;
+            test_image_ptr[row][col] = strtod(tok, NULL)/255.0;
             col +=1;
             tok = strtok(NULL, ",");
         }
@@ -95,7 +95,7 @@ struct DATA* load_mnist(){
 
         tok = strtok(NULL, ",");
         while (tok != NULL){
-            train_image_ptr[row][col] = strtod(tok, &ptr)/255.0;
+            train_image_ptr[row][col] = strtod(tok, NULL)/255.0;
             col +=1;
             tok = strtok(NULL, ",");
     
@@ -173,6 +173,10 @@ int main(int argc, char** argv){
         fprintf(stderr, "usage is bin/mnist.exe <optimizer>\n");
         return -1;
     }
+
+    // seed random number generator
+    srand(time(0));
+
     int batch_size = 50;
     int epochs = 3;
     int optimizer = atoi(argv[1]);
@@ -185,10 +189,13 @@ int main(int argc, char** argv){
     NETWORK* my_net = initialize_network(my_n, &s);
 
     train_network(my_net, my_data->train_images, my_data->train_labels, N_TRAIN, batch_size, epochs, optimizer);
-    test_network(my_net, my_data);
-
     export_weights(my_net, "weights_biases/weights.txt");
     export_biases(my_net, "weights_biases/biases.txt");
+
+    // import_weights(my_net, "weights_biases/weights.txt");
+    // import_biases(my_net, "weights_biases/biases.txt");
+
+    test_network(my_net, my_data);
 
     free_network(my_net);
 }
