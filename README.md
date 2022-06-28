@@ -8,7 +8,7 @@ it is still a work in progress. The neural net is designed as a classifier and h
 
 - hidden layers use relU activation 
 - output layer uses softmax activation
-- back propagation uses mean-squared-error loss
+- We use cross-entropy loss (mean-squared loss leads to poor training of model via vanishing gradients)
 
 
 # Walkthrough of the Repository

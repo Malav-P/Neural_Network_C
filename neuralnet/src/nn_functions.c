@@ -357,28 +357,6 @@ static double out_activ_deriv(double* lyr_L, int len, int index){
 
 }
 
-// given a layer lyr_L of structure type L and and index i, this function returns the derivative of the softmax function wrt to the variable in the (index)th position of lyr_L
-// static double* out_activ_deriv_vec(double* lyr_L, int len, int index){
-
-// 	double sum = 0;
-// 	double* ptr = (double*)calloc(len, sizeof(double));
-
-// 	double max = largest_val(lyr_L, len);
-
-// 	for (int i=0;i<len;i++){
-// 		sum += exp(lyr_L[i] - max);
-// 	}
-
-
-// 	for (int j = 0; j<len; j++){
-// 		double kronecker = (j==index) ? 1:0 ; 
-// 		ptr[j] = (1/sum)*exp(lyr_L[j] - max)*(kronecker-(1/sum)*exp(lyr_L[j]-max));
-// 		printf("%.10f\n", ptr[j]);
-// 	}
-
-// 	return ptr;
-// }
-
 
 
 
@@ -512,12 +490,7 @@ static struct GRADIENTS* comp_grad(double input[], double output[], NETWORK* my_
 	comp_grad_H(input, my_net, itrmd_N);
 
 	for (i=0;i<network[*size-1];i++){
-		// double* deriv_vec = out_activ_deriv_vec(itrmd_N[*size-1], network[*size-1], i);
-		// for (int j = 0; j<network[*size-1];j++){
-		// 	err_N[*size-1][i] += (my_net->activations_N[*size-1][j] - output[j])*deriv_vec[j];
-		// }
-		err_N[*size-1][i] = (my_net->activations_N[*size-1][i] - output[i])*out_activ_deriv(itrmd_N[*size-1], network[*size-1], i);
-		// free(deriv_vec);
+		err_N[*size-1][i] = (my_net->activations_N[*size-1][i] - output[i]);
 	}
 
 	for (i=*size-2;i>0;i--){
