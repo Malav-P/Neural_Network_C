@@ -280,7 +280,21 @@ NETWORK* initialize_network(int* n, int* s){
 // BEGIN FUNCTIONS FOR HIDDEN AND OUTPUT LAYER ACTIVATIONS
 //
 
-
+double largest_val(double* arr, int n){
+    int i;
+    
+    // Initialize maximum element
+    double max = arr[0];
+ 
+    // Traverse array elements from second and
+    // compare every element with current max 
+    for (i = 1; i < n; i++)
+        if (arr[i] > max){
+            max = arr[i];
+        }
+ 
+    return max;
+}
 
 
 // applies activation function to a structure of type L. I have chosen the relU function
@@ -314,12 +328,14 @@ static void out_activ(double* lyr_L, int len){
 	double sum = 0;
 	int i;
 
+	double max = largest_val(lyr_L, len);
+
 	for (i=0;i<len;i++){
-		sum += exp(lyr_L[i]);
+		sum += exp(lyr_L[i] - max);
 	}
 
 	for (i=0; i<len;i++){
-		lyr_L[i] = (1/sum)*exp(lyr_L[i]);
+		lyr_L[i] = (1/sum)*exp(lyr_L[i] - max);
 	}
 }
 
@@ -330,11 +346,13 @@ static double out_activ_deriv(double* lyr_L, int len, int index){
 	double sum = 0;
 	double x = lyr_L[index];
 
+	double max = largest_val(lyr_L, len);
+
 	for (int i=0;i<len;i++){
-		sum += exp(lyr_L[i]);
+		sum += exp(lyr_L[i] - max);
 	}
 
-	return (1/sum)*exp(x)*(1-(1/sum)*exp(x));
+	return (1/sum)*exp(x - max)*(1-(1/sum)*exp(x-max));
 }
 
 
